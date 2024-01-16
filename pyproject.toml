@@ -45,6 +45,7 @@ dynamic = ["version"]
 test = [
     "pre-commit",
     "pytest",
+    "pytest-benchmark",
     "pytest-cov",
     "transformers",
     "coverage[toml]>=5.1",
