@@ -558,6 +558,8 @@ def create_fsm_index_end_to_end(
     seen: Set[int] = set()
     next_states = {fsm_info.initial}
 
+    vocab_trie = create_vocab_trie(vocabulary)
+
     while next_states:
         start_state = next_states.pop()
 
@@ -568,6 +570,7 @@ def create_fsm_index_end_to_end(
             fsm_info.initial,
             fsm_info.finals,
             vocabulary,
+            vocab_trie,
             start_state,
         )
 
