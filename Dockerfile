@@ -4,6 +4,11 @@ WORKDIR /outlines
 
 RUN pip install --upgrade pip
 
+# Copy necessary build components
+COPY .git ./.git
+COPY pyproject.toml .
+COPY outlines ./outlines
+
 # Install outlines and outlines[serve]
 RUN pip install .
 RUN pip install .[serve]
