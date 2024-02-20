@@ -23,7 +23,6 @@ jobs:
     - name: Build and push Docker image
       uses: docker/build-push-action@v5
       with:
-        context: .
         push: true
         tags: |
           lapp0/outlines-serve:latest
