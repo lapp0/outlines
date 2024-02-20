@@ -37,11 +37,6 @@ jobs:
         python -m venv venv-wheel
         venv-wheel/bin/python -m pip install ../dist/outlines-*.whl
         venv-wheel/bin/python -c "import outlines"
-    - name: Publish to PyPi
-      uses: pypa/gh-action-pypi-publish@v1.4.2
-      with:
-        user: __token__
-        password: ${{ secrets.PYPI_TOKEN }}
 
     - name: Log in to Docker Hub
       uses: docker/login-action@v3
