@@ -103,9 +103,6 @@ if __name__ == "__main__":
     parser.add_argument("--port", type=int, default=8000)
     parser.add_argument("--ssl-keyfile", type=str, default=None)
     parser.add_argument("--ssl-certfile", type=str, default=None)
-    parser.add_argument(
-        "--model", type=str, default="mistralai/Mistral-7B-Instruct-v0.2"
-    )
     parser = AsyncEngineArgs.add_cli_args(parser)
     args = parser.parse_args()
 

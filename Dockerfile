@@ -10,7 +10,6 @@ COPY pyproject.toml .
 COPY outlines ./outlines
 
 # Install outlines and outlines[serve]
-RUN pip install .
 RUN pip install .[serve]
 
 # https://outlines-dev.github.io/outlines/reference/vllm/

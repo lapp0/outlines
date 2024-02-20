@@ -44,7 +44,12 @@ pre-commit install
 
 #### Developing Serve Endpoint Via Docker
 
+```bash
+docker build -t outlines-serve .
+docker run -p 8012:8000 outlines-serve
+```
 
+This builds and runs `outlines-serve` on `localhost:8012`
 
 ### Before pushing your code
 
