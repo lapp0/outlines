@@ -7,7 +7,7 @@ on:
 
 jobs:
   release-job:
-    name: Build and publish on PyPi
+    name: Build and publish on PyPi and Docker Hub
     runs-on: ubuntu-latest
     environment: release
     steps:
@@ -46,6 +46,7 @@ jobs:
     - name: Build and push Docker image
       uses: docker/build-push-action@v5
       with:
+        context: .
         push: true
         tags: |
           lapp0/outlines-serve:latest

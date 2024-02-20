@@ -5,7 +5,7 @@ WORKDIR /outlines
 RUN pip install --upgrade pip
 
 # Copy necessary build components
-COPY .git ./.git
+COPY .git ./.git  # required by setuptools-scm
 COPY pyproject.toml .
 COPY outlines ./outlines
 
