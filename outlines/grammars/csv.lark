@@ -1,4 +1,4 @@
-// Adapted from https://github.com/lark-parser/lark/blob/master/lark/grammars/common.lark
+// Adapted from https://github.com/lark-parser/lark/blob/master/examples/composition/csv.lark
 
 // Lark License:
 // Copyright © 2017 Erez Shinan
@@ -21,60 +21,17 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
-// Basic terminals for common use
+start: header (_NL row)+ _NL?
+header: "#" " "? (WORD _SEPARATOR?)+
+row: (_anything _SEPARATOR?)+
+_anything: INT | WORD | NON_SEPARATOR_STRING | FLOAT | SIGNED_FLOAT
+NON_SEPARATOR_STRING: /[a-zA-z.;\\\/]+/
+_SEPARATOR: /[  ]+/
+          | "\t"
+          | ","
 
-
-//
-// Numbers
-//
-
-DIGIT: "0".."9"
-HEXDIGIT: "a".."f"|"A".."F"|DIGIT
-
-INT: DIGIT+
-SIGNED_INT: ["+"|"-"] INT
-DECIMAL: INT "." INT? | "." INT
-
-// float = /-?\d+(\.\d+)?([eE][+-]?\d+)?/
-_EXP: ("e"|"E") SIGNED_INT
-FLOAT: INT _EXP | DECIMAL _EXP?
-SIGNED_FLOAT: ["+"|"-"] FLOAT
-
-NUMBER: FLOAT | INT
-SIGNED_NUMBER: ["+"|"-"] NUMBER
-
-// modified for outlines to use lookaheads not lookbehinds for compatability with interegular
-_STRING_INNER: /(?:[^"\\]|\\.)*?/
-ESCAPED_STRING : "\"" _STRING_INNER "\""
-
-UNESCAPED_STRING: /\"[^"]*\"/
-
-
-//
-// Names (Variables)
-//
-LCASE_LETTER: "a".."z"
-UCASE_LETTER: "A".."Z"
-
-LETTER: UCASE_LETTER | LCASE_LETTER
-WORD: LETTER+
-
-CNAME: ("_"|LETTER) ("_"|LETTER|DIGIT)*
-
-
-//
-// Whitespace
-//
-WS_INLINE: (" "|/\t/)+
-WS: /[ \t\f\r\n]/+
-
-CR : /\r/
-LF : /\n/
-NEWLINE: (CR? LF)+
-
-
-// Comments
-SH_COMMENT: /#[^\n]*/
-CPP_COMMENT: /\/\/[^\n]*/
-C_COMMENT: "/*" /(.|\n)*?/ "*/"
-SQL_COMMENT: /--[^\n]*/
+%import common.NEWLINE -> _NL
+%import common.WORD
+%import common.INT
+%import common.FLOAT
+%import common.SIGNED_FLOAT

@@ -11,4 +11,7 @@ def read_grammar(grammar_file_name, base_grammar_path=GRAMMAR_PATH):
 
 
 arithmetic = read_grammar("arithmetic.lark")
+csv = read_grammar("csv.lark")
 json = read_grammar("json.lark")
+lark = read_grammar("lark.lark")
+sql_select = read_grammar("sql_select.lark")

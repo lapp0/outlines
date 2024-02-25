@@ -183,21 +183,7 @@ print(result)
 # 5+5+5+5+5
 ```
 
-
-EBNF grammars can be cumbersome to write. This is why Outlines provides grammar definitions in the `outlines.grammars.` module
-
-```python
-from outlines import models, generate, grammars
-
-model = models.transformers("mistralai/Mistral-7B-Instruct-v0.2")
-generator = generate.cfg(model, grammars.arithmetic, max_tokens=100)
-
-result = generator("Question: How can you write 5*5 using addition?\nAnswer:")
-print(result)
-# 5+5+5+5+5
-```
-
-The available grammars are listed [here](https://github.com/outlines-dev/outlines/tree/main/outlines/grammars).
+EBNF grammars can be cumbersome to write. This is why Outlines provides grammar definitions in the `outlines.grammars.` module. You may read more in the [Built-In Grammars](#built-in-grammars). Outlines also provides [documentation on building custom grammars](reference/creating_grammars.md).
 
 
 ### Regex-structured generation
@@ -367,6 +353,22 @@ Once you are done experimenting with a prompt and an output structure, it is use
     response = joke("baseball")
     ```
     It make it easier for the community to collaborate on the infinite number of use cases enabled by these models!
+
+### Built-In Grammars
+
+You can take advantage of Outlines' grammar library by passing a grammar definition from `outlines.grammars.`. (See available grammars [here](/outlines/grammars))
+
+```python
+from outlines import models, generate, grammars
+
+model = models.transformers("mistralai/Mistral-7B-v0.1")
+generator = generate.cfg(model, grammars.arithmetic, max_tokens=100)
+
+result = generator("Write a series of operations on integers that return the number 5 ")
+print(result)
+# 100-2-75+50-18+27-501.
+```
+
 
 ## Going further
 
