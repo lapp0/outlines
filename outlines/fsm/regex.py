@@ -790,6 +790,9 @@ def reduced_vocabulary(
                         List[int], [gpt2_unicode_to_bytes().get(c) for c in token]
                     )
                     if None in token_bytes:
+                        import pdb
+
+                        pdb.set_trace()
                         raise RuntimeError(
                             f"Cannot convert token `{token}` ({token_idx}) to bytes: {token_str}"
                         )
