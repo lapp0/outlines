@@ -787,7 +787,7 @@ def reduced_vocabulary(
                     # for example, b` \xf0` can be one token; these tokenizers
                     # map each byte to a valid utf-8 character
                     token_bytes = cast(
-                        List[numba.uint8], [gpt2_unicode_to_bytes().get(c) for c in token]
+                        List[int], [gpt2_unicode_to_bytes().get(c, ord(c)) for c in token]
                     )
                     if None in token_bytes:
                         raise RuntimeError(
