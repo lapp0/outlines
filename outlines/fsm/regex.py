@@ -787,12 +787,9 @@ def reduced_vocabulary(
                     # for example, b` \xf0` can be one token; these tokenizers
                     # map each byte to a valid utf-8 character
                     token_bytes = cast(
-                        List[int], [gpt2_unicode_to_bytes().get(c) for c in token]
+                        List[np.dtype("i8")], [gpt2_unicode_to_bytes().get(c) for c in token]
                     )
                     if None in token_bytes:
-                        import pdb
-
-                        pdb.set_trace()
                         raise RuntimeError(
                             f"Cannot convert token `{token}` ({token_idx}) to bytes: {token_str}"
                         )
