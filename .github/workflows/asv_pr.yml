@@ -21,7 +21,7 @@ jobs:
 
     - run: echo "REGEX=benchmarks/asv.conf.json" >> $GITHUB_ENV
 
-    - name: Checkout repository, set upstream
+    - name: Checkout repository
       uses: actions/checkout@v3
 
     - name: Set up Python
@@ -40,7 +40,7 @@ jobs:
         # extracting the regex, see https://stackoverflow.com/a/36798723
         REGEX=$(echo "$COMMENT" | sed -n "s/^.*-b\s*\(\S*\).*$/\1/p")
         asv check -E existing
-        git remote add upstream ${{ github.repository }}
+        git remote add upstream https://github.com/${{ github.repository }}.git
         git fetch upstream
         asv machine --yes
         asv continuous -f 1.1 -b $REGEX upstream/main HEAD
