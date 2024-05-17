@@ -31,18 +31,15 @@ jobs:
         python -m pip install --upgrade pip
         pip install asv
 
-    - name: Create ASV machine config file
-      run: asv machine --machine gh-runner --yes --config benchmarks/asv.conf.json
-
     - name: Save comparison of PR against main branch
       run: |
         # adapted from pandas asv_pr.yml
         # extracting the regex, see https://stackoverflow.com/a/36798723
         REGEX=$(echo "$COMMENT" | sed -n "s/^.*-b\s*\(\S*\).*$/\1/p")
-        asv check -E existing
+        asv check -E existing --config benchmarks/asv.conf.json
         git remote add upstream ${{ vars.TARGET_REPO }}
         git fetch upstream
-        asv machine --yes
+        asv machine --yes --config benchmarks/asv.conf.json
         asv continuous -f 1.1 -b $REGEX upstream/main HEAD
         echo 'BENCH_OUTPUT<<EOF' >> $GITHUB_ENV
         asv compare -f 1.1 upstream/main HEAD >> $GITHUB_ENV
