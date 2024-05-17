@@ -39,7 +39,7 @@ jobs:
         # adapted from pandas asv_pr.yml
         # extracting the regex, see https://stackoverflow.com/a/36798723
         REGEX=$(echo "$COMMENT" | sed -n "s/^.*-b\s*\(\S*\).*$/\1/p")
-        cd asv_bench
+        cd benchmarks
         asv check -E existing
         git remote add upstream ${{ vars.TARGET_REPO }}
         git fetch upstream
