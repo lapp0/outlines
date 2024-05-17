@@ -2,7 +2,7 @@
     "version": 1,
     "project": "outlines",
     "project_url": "https://outlines-dev.github.io/outlines/",
-    "repo": "https://github.com/outlines-dev/outlines",
+    "repo": ".",
     "dvcs": "git",
     "branches": ["main"],
     "build_command": "pip install .",
