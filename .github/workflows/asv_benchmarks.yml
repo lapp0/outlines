@@ -32,8 +32,8 @@ jobs:
     - name: Checkout the benchmarks repository
       env:
         GH_TOKEN: ${{ secrets.GH_TOKEN }}
-        TARGET_REPO: ${{ secrets.TARGET_REPO }}
-        TARGET_BRANCH: ${{ secrets.TARGET_BRANCH }}
+        TARGET_REPO: ${{ vars.TARGET_REPO }}
+        TARGET_BRANCH: ${{ vars.TARGET_BRANCH }}
       run: |
         git config --global user.name "github-actions[bot]"
         git config --global user.email "github-actions[bot]@users.noreply.github.com"
