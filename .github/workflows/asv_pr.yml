@@ -9,7 +9,6 @@ permissions:
   pull-requests: write  # Write access for pull requests
 
 env:
-  ASV_CONF_DIR: "benchmarks/asv.conf.json"
   PYTHON_VERSION: "3.10"
   WORKING_DIR: ${{ github.workspace }}/benchmarks
   ARTIFACTS_DIR: ${{ github.workspace }}/artifacts
@@ -19,6 +18,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+
+    - run: echo "REGEX=benchmarks/asv.conf.json" >> $GITHUB_ENV
+
     - name: Checkout repository
       uses: actions/checkout@v3
 
