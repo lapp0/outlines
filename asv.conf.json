@@ -1,9 +1,9 @@
 {
     "version": 1,
-    "project": "outlines",
+    "project": "Outlines",
     "project_url": "https://outlines-dev.github.io/outlines/",
     "repo": "https://github.com/lapp0/outlines.git",
-    "dvcs": "git",
+    //"dvcs": "git",
     "branches": ["main"],
     "build_command": "pip install .",
     "environment_type": "virtualenv",
@@ -11,6 +11,6 @@
     "benchmark_dir": "benchmarks",
     "env_dir": "env",
     "results_dir": "results",
-    "html_dir": "html",
-    "build_cache_size": 8
+    //"html_dir": "html",
+    //"build_cache_size": 8
 }
