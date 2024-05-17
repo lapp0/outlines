@@ -9,6 +9,7 @@ permissions:
   pull-requests: write  # Write access for pull requests
 
 env:
+  TARGET_REPO: "https://github.com/lapp0/outlines.git"
   PYTHON_VERSION: "3.10"
   WORKING_DIR: ${{ github.workspace }}/benchmarks
   ARTIFACTS_DIR: ${{ github.workspace }}/artifacts
@@ -40,7 +41,7 @@ jobs:
         # extracting the regex, see https://stackoverflow.com/a/36798723
         REGEX=$(echo "$COMMENT" | sed -n "s/^.*-b\s*\(\S*\).*$/\1/p")
         asv check -E existing
-        git remote add upstream ${{ vars.TARGET_REPO }}
+        git remote add upstream ${{ env.TARGET_REPO }}
         git fetch upstream
         asv machine --yes
         asv continuous -f 1.1 -b $REGEX upstream/main HEAD
