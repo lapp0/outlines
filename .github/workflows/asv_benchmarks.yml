@@ -31,7 +31,7 @@ jobs:
         pip install asv
 
     - name: Create ASV machine config file
-      run: asv machine --machine gh-runner --yes
+      run: asv machine --machine gh-runner --yes --config benchmarks/asv.conf.json
 
     - name: Run ASV benchmarks
       run: asv run
