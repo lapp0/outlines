@@ -40,6 +40,7 @@ dynamic = ["version"]
 
 [project.optional-dependencies]
 test = [
+    "asv",
     "pre-commit",
     "pytest",
     "pytest-benchmark",
