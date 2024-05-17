@@ -36,7 +36,7 @@ jobs:
 
     - name: Save comparison of PR against main branch
         run: |
-	  # adapted from pandas asv_pr.yml
+          # adapted from pandas asv_pr.yml
           # extracting the regex, see https://stackoverflow.com/a/36798723
           REGEX=$(echo "$COMMENT" | sed -n "s/^.*-b\s*\(\S*\).*$/\1/p")
           cd asv_bench
@@ -49,7 +49,6 @@ jobs:
           asv compare -f 1.1 upstream/main HEAD >> $GITHUB_ENV
           echo 'EOF' >> $GITHUB_ENV
           echo "REGEX=$REGEX" >> $GITHUB_ENV
-
 
       - uses: actions/github-script@v7
         env:
