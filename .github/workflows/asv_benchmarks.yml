@@ -1,14 +1,11 @@
-name: Run ASV Benchmarks
+name: Update Historical ASV Benchmarks
 
 on:
-  pull_request:
-    branches: [main]
   push:
     branches: [main]
 
 jobs:
-  benchmark:
-    name: Run ASV Benchmarks
+  update-pages:
     runs-on: ubuntu-latest
 
     steps:
