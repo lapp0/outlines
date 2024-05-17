@@ -34,9 +34,6 @@ jobs:
     - name: Create ASV machine config file
       run: asv machine --machine gh-runner --yes --config benchmarks/asv.conf.json
 
-    - name: Run ASV benchmarks
-      run: asv run --config benchmarks/asv.conf.json
-
     - name: Save comparison of PR against main branch
       run: |
         git remote add upstream https://github.com/${{ github.repository }}.git
