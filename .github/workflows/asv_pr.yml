@@ -1,16 +1,11 @@
-name: Update GitHub Pages
+name: Comment on PR with Benchmarks
 
 on:
-  push:
+  pull_request:
     branches: [main]
 
-env:
-  PYTHON_VERSION: "3.10"
-  WORKING_DIR: ${{ github.workspace }}/benchmarks
-  ARTIFACTS_DIR: ${{ github.workspace }}/artifacts
-
 jobs:
-  update-pages:
+  benchmark:
     runs-on: ubuntu-latest
 
     steps:
@@ -20,7 +15,7 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
-        python-version: ${{ env.PYTHON_VERSION }}
+        python-version: "3.10"
 
     - name: Install dependencies
       run: |
@@ -31,26 +26,16 @@ jobs:
     - name: Run ASV benchmarks
       run: asv run
 
-    - name: Checkout the benchmarks repository
-      env:
-        GH_TOKEN: ${{ secrets.GH_TOKEN }}
-        TARGET_REPO: ${{ vars.TARGET_REPO }}
-        TARGET_BRANCH: ${{ vars.TARGET_BRANCH }}
+    - name: Compare PR against main
       run: |
-        git config --global user.name "github-actions[bot]"
-        git config --global user.email "github-actions[bot]@users.noreply.github.com"
-        git clone https://x-access-token:${GH_TOKEN}@github.com/${TARGET_REPO}.git -b ${TARGET_BRANCH} benchmarks-repo
+        git remote add upstream https://github.com/${{ github.repository }}.git
+        git fetch upstream
+        asv continuous upstream/main HEAD --verbose || true
+        asv compare upstream/main HEAD --sort ratio --verbose | tee output
 
-    - name: Copy ASV results to benchmarks repository
-      run: |
-        rm -rf benchmarks-repo/asv_results
-        mv asv_results benchmarks-repo/
-
-    - name: Commit and push ASV results
-      env:
-        GH_TOKEN: ${{ secrets.GH_TOKEN }}
-      run: |
-        cd benchmarks-repo
-        git add asv_results
-        git commit -m "Update ASV benchmarks"
-        git push origin ${TARGET_BRANCH}
+    - name: Post benchmark results as PR comment
+      uses: marocchino/sticky-pull-request-comment@v2
+      with:
+        token: ${{ secrets.GH_TOKEN }}
+        header: "Benchmark Results"
+        path: output
