@@ -34,7 +34,7 @@ jobs:
       run: asv machine --machine gh-runner --yes --config benchmarks/asv.conf.json
 
     - name: Run ASV benchmarks
-      run: asv run
+      run: asv run --config benchmarks/asv.conf.json
 
     - name: Checkout the benchmarks repository
       env:
