@@ -24,9 +24,6 @@ jobs:
 
     - name: Checkout repository, set upstream
       uses: actions/checkout@v3
-      run: |
-        git remote add upstream ${{ github.repository }}"
-        git fetch upstream
 
     - name: Set up Python
       uses: actions/setup-python@v4
@@ -44,6 +41,8 @@ jobs:
         # extracting the regex, see https://stackoverflow.com/a/36798723
         REGEX=$(echo "$COMMENT" | sed -n "s/^.*-b\s*\(\S*\).*$/\1/p")
         asv check -E existing
+        git remote add upstream ${{ github.repository }}"
+        git fetch upstream
         asv machine --yes
         asv continuous -f 1.1 -b $REGEX upstream/main HEAD
         echo 'BENCH_OUTPUT<<EOF' >> $GITHUB_ENV
