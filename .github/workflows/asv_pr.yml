@@ -35,18 +35,32 @@ jobs:
       run: asv machine --machine gh-runner --yes --config benchmarks/asv.conf.json
 
     - name: Save comparison of PR against main branch
-      run: |
-        git remote add upstream https://github.com/${{ github.repository }}.git
-        git fetch upstream
-        asv continuous upstream/main HEAD --verbose || true
-        asv compare upstream/main HEAD --sort ratio --verbose | tee output
-        python -m lf_asv_formatter --asv_version "$(echo asv --version)"
-        printf "\n\nClick [here]($STEP_URL) to view all benchmarks." >> output
-        mv output ${{ env.ARTIFACTS_DIR }}
-      env:
-        STEP_URL: "${{ steps.jobs.outputs.html_url }}#step:11:1"
-    - name: Upload artifacts (PR number and benchmarks output)
-      uses: actions/upload-artifact@v4
-      with:
-        name: benchmark-artifacts
-        path: ${{ env.ARTIFACTS_DIR }}
+        run: |
+          # extracting the regex, see https://stackoverflow.com/a/36798723
+          REGEX=$(echo "$COMMENT" | sed -n "s/^.*-b\s*\(\S*\).*$/\1/p")
+          cd asv_bench
+          asv check -E existing
+          git remote add upstream https://github.com/pandas-dev/pandas.git
+          git fetch upstream
+          asv machine --yes
+          asv continuous -f 1.1 -b $REGEX upstream/main HEAD
+          echo 'BENCH_OUTPUT<<EOF' >> $GITHUB_ENV
+          asv compare -f 1.1 upstream/main HEAD >> $GITHUB_ENV
+          echo 'EOF' >> $GITHUB_ENV
+          echo "REGEX=$REGEX" >> $GITHUB_ENV
+
+
+      - uses: actions/github-script@v7
+        env:
+          BENCH_OUTPUT: ${{env.BENCH_OUTPUT}}
+          REGEX: ${{env.REGEX}}
+        with:
+          script: |
+            const ENV_VARS = process.env
+            const run_url = `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '\nBenchmarks completed. View runner logs here.' + run_url + '\nRegex used: '+ 'regex ' + ENV_VARS["REGEX"] + '\n' + ENV_VARS["BENCH_OUTPUT"]
+            })
