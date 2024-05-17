@@ -2,7 +2,7 @@
     "version": 1,
     "project": "Outlines",
     "project_url": "https://outlines-dev.github.io/outlines/",
-    "repo": "https://github.com/outlines-dev/outlines",
+    "repo": "git@github.com:outlines-dev/outlines",
     "branches": ["main"],
     "build_command": "pip install .",
     "environment_type": "virtualenv",
