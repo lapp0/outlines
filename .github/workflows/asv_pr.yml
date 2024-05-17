@@ -37,16 +37,19 @@ jobs:
     - name: Run ASV benchmarks
       run: asv run --config benchmarks/asv.conf.json
 
-    - name: Compare PR against main
+    - name: Save comparison of PR against main branch
       run: |
         git remote add upstream https://github.com/${{ github.repository }}.git
         git fetch upstream
         asv continuous upstream/main HEAD --verbose || true
-        asv compare upstream/main HEAD --sort ratio --verbose | tee ${{ env.ARTIFACTS_DIR }}/output
-
-    - name: Post benchmark results as PR comment
-      uses: marocchino/sticky-pull-request-comment@v2
+        asv compare upstream/main HEAD --sort ratio --verbose | tee output
+        python -m lf_asv_formatter --asv_version "$(echo asv --version)"
+        printf "\n\nClick [here]($STEP_URL) to view all benchmarks." >> output
+        mv output ${{ env.ARTIFACTS_DIR }}
+      env:
+        STEP_URL: "${{ steps.jobs.outputs.html_url }}#step:11:1"
+    - name: Upload artifacts (PR number and benchmarks output)
+      uses: actions/upload-artifact@v4
       with:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        header: "Benchmark Results"
-        path: ${{ env.ARTIFACTS_DIR }}/output
+        name: benchmark-artifacts
+        path: ${{ env.ARTIFACTS_DIR }}
