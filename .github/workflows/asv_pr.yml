@@ -52,7 +52,7 @@ jobs:
         python -m lf_asv_formatter
         printf "\n\nClick [here]($STEP_URL) to view all benchmarks." >> output
 
-    # from https://github.com/VTDA-Group/superphot-plus/blob/main/.github/workflows/asv-pr.yml
+    # from https://github.com/VTDA-Group/superphot-plus/blob/2ff9885/.github/workflows/asv-pr.yml
     - name: Publish comment to PR
       uses: actions/github-script@v6
       with:

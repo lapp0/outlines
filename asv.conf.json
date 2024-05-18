@@ -2,9 +2,11 @@
     "version": 1,
     "project": "Outlines",
     "project_url": "https://outlines-dev.github.io/outlines/",
-    "repo": "https://github.com/lapp0/outlines.git",
+    "repo": "..",
     //"dvcs": "git",
-    "branches": ["upstream/main"],
+    "branches": [
+	"HEAD"
+    ],
     "build_command": [
 	"python -m build -Cbuilddir=builddir --wheel --outdir {build_cache_dir} {build_dir}"
     ],
@@ -13,6 +15,6 @@
     "benchmark_dir": "benchmarks",
     "env_dir": "env",
     "results_dir": "results",
-    //"html_dir": "html",
-    //"build_cache_size": 8
+    "html_dir": "_html",
+    "build_cache_size": 8
 }
