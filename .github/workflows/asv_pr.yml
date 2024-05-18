@@ -52,10 +52,10 @@ jobs:
         COMMIT_HASH=$(git rev-parse upstream/main)
 
         # produce benchmarks comment
-        asv continuous upstream/main HEAD --factor 1.1 --sort ratio --verbose
-        asv compare upstream/main HEAD --factor 1.1 --sort ratio --verbose | tee ../output
-        python -m lf_asv_formatter
-        printf "\n\nClick [here]($STEP_URL) to view all benchmarks." >> ../output
+        asv continuous upstream/main HEAD --factor 1.1 --sort ratio
+        asv compare upstream/main HEAD --factor 1.1 --sort ratio | tee output
+        python -m lf_asv_formatter --asv_version "$(echo asv --version)"
+        printf "\n\nClick [here]($STEP_URL) to view all benchmarks." >> output
       env:
         STEP_URL: "${{ steps.jobs.outputs.html_url }}#step:8:1"
 
