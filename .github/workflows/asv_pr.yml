@@ -34,15 +34,13 @@ jobs:
 
     - name: Save comparison of PR against main branch
       run: |
-        # extracting the regex, see https://stackoverflow.com/a/36798723
-        REGEX=$(echo "$COMMENT" | sed -n "s/^.*-b\s*\(\S*\).*$/\1/p")
         # ensure benchmarks are sane
         asv check -E existing
         # prepare main branch for comparison
         git remote add upstream https://github.com/${{ github.repository }}.git
         git fetch upstream
         asv machine --yes
-        asv continuous -b $REGEX upstream/main HEAD --factor 1.1 --sort ratio --verbose
+        asv continuous upstream/main HEAD --factor 1.1 --sort ratio --verbose
         echo 'BENCH_OUTPUT<<EOF' >> $GITHUB_ENV
         #asv compare upstream/main HEAD  --split --verbose >> $GITHUB_ENV
         #asv compare -f 1.1 upstream/main HEAD
