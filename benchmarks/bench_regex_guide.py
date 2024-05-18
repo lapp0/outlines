@@ -19,7 +19,7 @@ regex_samples = {
 }
 
 
-class RegexFsmBenchmark:
+class RegexGuideBenchmark:
     params = regex_samples.keys()
 
     def setup(self, pattern_name):
@@ -27,5 +27,17 @@ class RegexFsmBenchmark:
         ensure_numba_compiled(self.tokenizer)
         self.pattern = regex_samples[pattern_name]
 
-    def time_regex_to_fsm(self, pattern_name):
+    def time_regex_to_guide(self, pattern_name):
+        RegexGuide(self.pattern, self.tokenizer)
+
+
+class MemoryRegexGuideBenchmark:
+    params = ["simple_phone", "complex_span_constrained_relation_extraction"]
+
+    def setup(self, pattern_name):
+        self.tokenizer = setup_tokenizer()
+        ensure_numba_compiled(self.tokenizer)
+        self.pattern = regex_samples[pattern_name]
+
+    def peakmem_regex_to_guide(self, pattern_name):
         RegexGuide(self.pattern, self.tokenizer)
