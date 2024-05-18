@@ -67,15 +67,16 @@ schemas = dict(simple_schema=simple_schema, complex_schema=complex_schema)
 
 
 class JsonSchemaBenchmark:
-    def setup(self):
+    params = schemas.keys()
+
+    def setup(self, schema_name):
         self.tokenizer = setup_tokenizer()
+        self.schema = schemas[schema_name]
         ensure_numba_compiled(self.tokenizer)
 
-    def time_json_schema_to_regex(self):
-        for schema_name, schema in schemas.items():
-            build_regex_from_schema(schema)
+    def time_json_schema_to_regex(self, schema_name):
+        build_regex_from_schema(self.schema)
 
-    def time_json_schema_to_fsm(self):
-        for schema_name, schema in schemas.items():
-            regex = build_regex_from_schema(schema)
-            RegexGuide(regex, self.tokenizer)
+    def time_json_schema_to_fsm(self, schema_name):
+        regex = build_regex_from_schema(self.schema)
+        RegexGuide(regex, self.tokenizer)

@@ -20,10 +20,12 @@ regex_samples = {
 
 
 class RegexFsmBenchmark:
-    def setup(self):
-        self.tokenizer = setup_tokenizer()
-        ensure_numba_compiled(self.tokenizer)
+    params = regex_samples.keys()
 
-    def time_regex_to_fsm(self):
-        for regex_name, regex_str in regex_samples.items():
-            RegexGuide(regex_str, self.tokenizer)
+    def setup(self, pattern_name):
+        ensure_numba_compiled(self.tokenizer)
+        self.tokenizer = setup_tokenizer()
+        self.pattern = regex_samples[pattern_name]
+
+    def time_regex_to_fsm(self, pattern_name):
+        RegexGuide(self.pattern, self.tokenizer)
