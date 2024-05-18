@@ -1,4 +1,4 @@
-name: Comment on PR with Benchmarks
+name: Benchmark PR
 
 on:
   pull_request:
@@ -14,8 +14,12 @@ env:
   ARTIFACTS_DIR: ${{ github.workspace }}/artifacts
 
 jobs:
-  benchmark:
+  benchmark-pr:
     runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: ${{ env.WORKING_DIR }}
 
     steps:
 
@@ -50,7 +54,6 @@ jobs:
         # produce benchmarks comment
         asv continuous upstream/main HEAD --factor 1.1 --sort ratio
         asv compare upstream/main HEAD --split --factor 1.1 --sort ratio | tee output
-        pip install lf_asv_formatter
         python -m lf_asv_formatter
         printf "\n\nClick [here]($STEP_URL) to view all benchmarks." >> output
 
