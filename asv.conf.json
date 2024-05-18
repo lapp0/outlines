@@ -5,7 +5,10 @@
     "repo": "https://github.com/lapp0/outlines.git",
     //"dvcs": "git",
     "branches": ["main"],
-    "build_command": "pip install .",
+    "build_command": [
+	"python setup.py build",
+	"python -mpip wheel -w {build_cache_dir} {build_dir}"
+    ],
     "environment_type": "virtualenv",
     "show_commit_url": "https://github.com/lapp0/outlines/commit/",
     "benchmark_dir": "benchmarks",
