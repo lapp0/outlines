@@ -38,7 +38,7 @@ jobs:
         asv check -E existing
         # prepare main branch for comparison
         git remote add upstream https://github.com/${{ github.repository }}.git
-        git fetch upstream -u
+        git fetch upstream main
         asv machine --yes
         asv continuous upstream/main HEAD --factor 1.1 --sort ratio --verbose
         echo 'BENCH_OUTPUT<<EOF' >> $GITHUB_ENV
