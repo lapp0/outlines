@@ -36,7 +36,7 @@ jobs:
       run: |
         # adapted from pandas asv_pr.yml
         git remote add upstream https://github.com/${{ github.repository }}.git
-        git fetch upstream
+        git fetch upstream refs/heads/main
         asv machine --yes
         asv continuous upstream/main HEAD --factor 1.1 --sort ratio --verbose
         echo 'BENCH_OUTPUT<<EOF' >> $GITHUB_ENV
