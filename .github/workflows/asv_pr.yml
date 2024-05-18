@@ -36,7 +36,7 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install asv virtualenv tabulate lf-asv-formatter
+        pip install asv==0.6.1 virtualenv tabulate lf-asv-formatter
 
     - name: Create ASV machine config file
       run: asv machine --machine gh-runner --yes
@@ -53,9 +53,9 @@ jobs:
 
         # produce benchmarks comment
         asv continuous upstream/main HEAD --factor 1.1 --sort ratio --verbose
-        asv compare upstream/main HEAD --factor 1.1 --sort ratio --verbose | tee output
+        asv compare upstream/main HEAD --factor 1.1 --sort ratio --verbose | tee ../output
         python -m lf_asv_formatter
-        printf "\n\nClick [here]($STEP_URL) to view all benchmarks." >> output
+        printf "\n\nClick [here]($STEP_URL) to view all benchmarks." >> ../output
       env:
         STEP_URL: "${{ steps.jobs.outputs.html_url }}#step:8:1"
 
