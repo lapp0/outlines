@@ -44,7 +44,7 @@ jobs:
     - name: Save comparison of PR against main branch
       run: |
         # ensure benchmarks are sane
-        asv check -E existing
+        asv check -E existing --verbose
 
         # prepare main branch for comparison
         git remote add upstream https://github.com/${{ github.repository }}.git
