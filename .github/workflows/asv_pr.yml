@@ -40,7 +40,7 @@ jobs:
         asv machine --yes
 	asv continuous upstream/main HEAD --factor 1.1 --sort ratio --verbose
         echo 'BENCH_OUTPUT<<EOF' >> $GITHUB_ENV
-	#asv compare upstream/main HEAD  --split --verbose >> $GITHUB_ENV
+        #asv compare upstream/main HEAD  --split --verbose >> $GITHUB_ENV
         #asv compare -f 1.1 upstream/main HEAD
         #echo 'EOF' >> $GITHUB_ENV
 
