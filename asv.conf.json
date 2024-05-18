@@ -4,7 +4,7 @@
     "project_url": "https://outlines-dev.github.io/outlines/",
     "repo": "https://github.com/lapp0/outlines.git",
     //"dvcs": "git",
-    "branches": ["main"],
+    "branches": ["upstream/main"],
     "build_command": [
 	"python -m build -Cbuilddir=builddir --wheel --outdir {build_cache_dir} {build_dir}"
     ],
