@@ -36,20 +36,20 @@ jobs:
       run: |
         # ensure benchmarks are sane
         asv check -E existing
+
         # prepare main branch for comparison
         git remote add upstream https://github.com/${{ github.repository }}.git
         git fetch upstream main
         COMMIT_HASH=$(git rev-parse upstream/main)
-        #debug
-        echo commit hash
-        echo $COMMIT_HASH
-        #
+
+        # use consistent machine for benchmarks across runs
         asv machine --yes
+
+        # run benchmarks
         asv continuous $COMMIT_HASH HEAD --factor 1.1 --sort ratio --verbose
         echo 'BENCH_OUTPUT<<EOF' >> $GITHUB_ENV
-        #asv compare upstream/main HEAD  --split --verbose >> $GITHUB_ENV
-        #asv compare -f 1.1 upstream/main HEAD
-        #echo 'EOF' >> $GITHUB_ENV
+        asv compare $COMMIT_HASH HEAD --split --verbose >> $GITHUB_ENV
+        echo 'EOF' >> $GITHUB_ENV
 
     - uses: actions/github-script@v7
       env:
