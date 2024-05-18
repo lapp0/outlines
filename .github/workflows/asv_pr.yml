@@ -52,13 +52,14 @@ jobs:
         COMMIT_HASH=$(git rev-parse upstream/main)
 
         # produce benchmarks comment
-        asv continuous upstream/main HEAD --factor 1.1 --sort ratio
-        asv compare upstream/main HEAD --split --factor 1.1 --sort ratio | tee output
+        asv continuous upstream/main HEAD --factor 1.1 --sort ratio --verbose
+        asv compare upstream/main HEAD --factor 1.1 --sort ratio --verbose | tee output
         python -m lf_asv_formatter
         printf "\n\nClick [here]($STEP_URL) to view all benchmarks." >> output
       env:
         STEP_URL: "${{ steps.jobs.outputs.html_url }}#step:8:1"
 
+    # from https://github.com/hombit/load_ztfdr_for_tape/blob/9acf7c83/.github/workflows/asv-pr.yml
     - name: Find benchmarks comment
       uses: peter-evans/find-comment@v2
       id: find-comment
