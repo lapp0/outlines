@@ -21,6 +21,8 @@ jobs:
 
     - name: Checkout repository
       uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
 
     - name: Set up Python
       uses: actions/setup-python@v4
@@ -30,7 +32,10 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install asv
+        pip install asv virtualenv tabulate lf-asv-formatter
+
+    - name: Create ASV machine config file
+      run: asv machine --machine gh-runner --yes
 
     - name: Save comparison of PR against main branch
       run: |
@@ -41,9 +46,6 @@ jobs:
         git remote add upstream https://github.com/${{ github.repository }}.git
         git fetch upstream main
         COMMIT_HASH=$(git rev-parse upstream/main)
-
-        # use consistent machine for benchmarks across runs
-        asv machine --yes
 
         # produce benchmarks comment
         asv continuous upstream/main HEAD --factor 1.1 --sort ratio
