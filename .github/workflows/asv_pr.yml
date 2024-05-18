@@ -46,9 +46,9 @@ jobs:
         asv machine --yes
 
         # run benchmarks
-        asv continuous $COMMIT_HASH HEAD --factor 1.1 --sort ratio --verbose
+        asv continuous $COMMIT_HASH HEAD --factor 1.1 --sort ratio
         echo 'BENCH_OUTPUT<<EOF' >> $GITHUB_ENV
-        asv compare $COMMIT_HASH HEAD --split --verbose >> $GITHUB_ENV
+        asv compare $COMMIT_HASH HEAD --split --factor 1.1 --sort ratio >> $GITHUB_ENV
         echo 'EOF' >> $GITHUB_ENV
 
     - uses: actions/github-script@v7
