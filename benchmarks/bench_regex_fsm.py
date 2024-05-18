@@ -1,6 +1,6 @@
-import pytest
-
 import outlines
+
+from .common import ensure_numba_compiled, setup_tokenizer
 
 outlines.disable_cache()
 
@@ -19,14 +19,11 @@ regex_samples = {
 }
 
 
-@pytest.mark.parametrize("regex_name", regex_samples.keys())
-def test_benchmark_regex_to_fsm(
-    benchmark, tokenizer, ensure_numba_compiled, regex_name
-):
-    """Benchmark converting regex to FSM"""
-    regex_str = regex_samples[regex_name]
-    benchmark.pedantic(
-        RegexGuide,
-        args=(regex_str, tokenizer),
-        rounds=8,
-    )
+class RegexFsmBenchmark:
+    def setup(self):
+        self.tokenizer = setup_tokenizer()
+        ensure_numba_compiled(self.tokenizer)
+
+    def time_regex_to_fsm(self):
+        for regex_name, regex_str in regex_samples.items():
+            RegexGuide(regex_str, self.tokenizer)
