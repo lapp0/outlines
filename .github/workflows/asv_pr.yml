@@ -35,14 +35,14 @@ jobs:
     - name: Save comparison of PR against main branch
       run: |
         # adapted from pandas asv_pr.yml
-        asv check -E existing
         git remote add upstream https://github.com/${{ github.repository }}.git
         git fetch upstream
         asv machine --yes
-        asv continuous -f 1.1 upstream/main HEAD -v
+	asv continuous upstream/main HEAD --factor 1.1 --sort ratio --verbose
         echo 'BENCH_OUTPUT<<EOF' >> $GITHUB_ENV
-        asv compare -f 1.1 upstream/main HEAD >> $GITHUB_ENV -v
-        echo 'EOF' >> $GITHUB_ENV
+	#asv compare upstream/main HEAD  --split --verbose >> $GITHUB_ENV
+        #asv compare -f 1.1 upstream/main HEAD
+        #echo 'EOF' >> $GITHUB_ENV
 
     - uses: actions/github-script@v7
       env:
