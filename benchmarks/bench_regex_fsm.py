@@ -23,8 +23,8 @@ class RegexFsmBenchmark:
     params = regex_samples.keys()
 
     def setup(self, pattern_name):
-        ensure_numba_compiled(self.tokenizer)
         self.tokenizer = setup_tokenizer()
+        ensure_numba_compiled(self.tokenizer)
         self.pattern = regex_samples[pattern_name]
 
     def time_regex_to_fsm(self, pattern_name):
