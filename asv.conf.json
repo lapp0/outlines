@@ -6,9 +6,7 @@
     //"dvcs": "git",
     "branches": ["main"],
     "build_command": [
-        "python -m pip install -U pip",
-        "python -m pip install build",
-        "python -m build"
+	"python -m build -Cbuilddir=builddir --wheel --outdir {build_cache_dir} {build_dir}"
     ],
     "environment_type": "virtualenv",
     "show_commit_url": "https://github.com/lapp0/outlines/commit/",
