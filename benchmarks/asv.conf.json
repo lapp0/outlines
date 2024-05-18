@@ -12,7 +12,7 @@
     ],
     "environment_type": "virtualenv",
     "show_commit_url": "https://github.com/lapp0/outlines/commit/",
-    "benchmark_dir": "benchmarks",
+    "benchmark_dir": ".",
     "env_dir": "env",
     "results_dir": "results",
     "html_dir": "_html",
