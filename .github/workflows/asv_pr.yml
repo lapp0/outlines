@@ -48,10 +48,11 @@ jobs:
         # produce benchmarks comment
         asv continuous upstream/main HEAD --factor 1.1 --sort ratio
         asv compare upstream/main HEAD --split --factor 1.1 --sort ratio | tee output
-	pip install lf_asv_formatter
-	python -m lf_asv_formatter
-	printf "\n\nClick [here]($STEP_URL) to view all benchmarks." >> output
+        pip install lf_asv_formatter
+        python -m lf_asv_formatter
+        printf "\n\nClick [here]($STEP_URL) to view all benchmarks." >> output
 
+    # from https://github.com/VTDA-Group/superphot-plus/blob/main/.github/workflows/asv-pr.yml
     - name: Publish comment to PR
       uses: actions/github-script@v6
       with:
