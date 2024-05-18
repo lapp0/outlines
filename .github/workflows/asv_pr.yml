@@ -39,14 +39,13 @@ jobs:
         # prepare main branch for comparison
         git remote add upstream https://github.com/${{ github.repository }}.git
         git fetch upstream main
+        COMMIT_HASH=$(git rev-parse upstream/main)
         #debug
-        git branch -r
-        git remote show upstream
-        git rev-parse --verify upstream/main^{commit}
-        git rev-parse upstream/main^{commit}
+        echo commit hash
+        echo $COMMIT_HASH
         #
         asv machine --yes
-        asv continuous refs/remotes/upstream/main HEAD --factor 1.1 --sort ratio --verbose
+        asv continuous $COMMIT_HASH HEAD --factor 1.1 --sort ratio --verbose
         echo 'BENCH_OUTPUT<<EOF' >> $GITHUB_ENV
         #asv compare upstream/main HEAD  --split --verbose >> $GITHUB_ENV
         #asv compare -f 1.1 upstream/main HEAD
