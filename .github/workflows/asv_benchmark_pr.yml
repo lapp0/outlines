@@ -48,7 +48,7 @@ jobs:
 
         # Run benchmarks, writing comment contents to ./output
         asv continuous upstream/main HEAD \
-            --factor 1.1 --sort ratio --split --interleave-rounds -a repeat=7
+            --factor 1.1 --sort ratio --split --interleave-rounds -a repeat=1
         asv compare upstream/main HEAD --factor 1.1 --sort ratio --split | tee output
         python -m lf_asv_formatter --asv_version "$(echo asv --version)"
         printf "Benchmark Suite Results:\n\n" >> comment_body
