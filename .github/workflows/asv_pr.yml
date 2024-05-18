@@ -39,7 +39,11 @@ jobs:
         # prepare main branch for comparison
         git remote add upstream https://github.com/${{ github.repository }}.git
         git fetch upstream main
+	echo before
+	git branch -r
         asv machine --yes
+	echo after
+	git branch -r
         asv continuous upstream/main HEAD --factor 1.1 --sort ratio --verbose
         echo 'BENCH_OUTPUT<<EOF' >> $GITHUB_ENV
         #asv compare upstream/main HEAD  --split --verbose >> $GITHUB_ENV
