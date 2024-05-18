@@ -35,6 +35,7 @@ jobs:
     - name: Save comparison of PR against main branch
       run: |
         # adapted from pandas asv_pr.yml
+	asv check -E existing  # ensure benchmarks are sane
         git remote add upstream https://github.com/${{ github.repository }}.git
         git fetch upstream refs/heads/main
         asv machine --yes
