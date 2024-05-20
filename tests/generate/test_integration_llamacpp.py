@@ -247,12 +247,14 @@ def test_llamacpp_json_schema(model):
 
 @pytest.mark.parametrize(
     "grammar,validator,request",
-    (grammars.json, json.loads, "short and valid JSON object with two keys."),
-    (
-        grammars.arithmetic,
-        ast.parse,
-        "a mathematical expression with plus minus times and divide.",
-    ),
+    [
+        (grammars.json, json.loads, "short and valid JSON object with two keys."),
+        (
+            grammars.arithmetic,
+            ast.parse,
+            "a mathematical expression with plus minus times and divide.",
+        ),
+    ],
 )
 def test_llamacpp_cfg(model, grammar, validator, request):
     prompt = f"<|im_start|>user\nOutput a {request}<|im_end|>\n><|im_start|>assistant\n"
