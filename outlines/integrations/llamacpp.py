@@ -116,7 +116,10 @@ class LogitsProcessor:
             last_token = input_ids[-1]
             self._fsm_state = self.fsm.get_next_state(self._fsm_state, last_token)
 
-        allowed_tokens = self.fsm.get_next_instruction(self._fsm_state).tokens
+        instruction = self.fsm.get_next_instruction(self._fsm_state)
+        print(type(instruction))
+        print(instruction)
+        allowed_tokens = instruction.tokens
 
         mask = torch.full((scores.shape[-1],), -math.inf, device="cpu").numpy()
         mask[allowed_tokens] = 0
