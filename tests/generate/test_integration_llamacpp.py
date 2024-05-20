@@ -246,7 +246,7 @@ def test_llamacpp_json_schema(model):
 
 
 @pytest.mark.parametrize(
-    "grammar,validator,request",
+    "grammar,validator,query",
     [
         (grammars.json, json.loads, "short and valid JSON object with two keys."),
         (
@@ -256,8 +256,8 @@ def test_llamacpp_json_schema(model):
         ),
     ],
 )
-def test_llamacpp_cfg(model, grammar, validator, request):
-    prompt = f"<|im_start|>user\nOutput a {request}<|im_end|>\n><|im_start|>assistant\n"
+def test_llamacpp_cfg(model, grammar, validator, query):
+    prompt = f"<|im_start|>user\nOutput a {query}<|im_end|>\n><|im_start|>assistant\n"
     result = generate.cfg(model, grammar)(prompt, seed=11)
     try:
         validator(result)
