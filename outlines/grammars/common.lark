@@ -46,7 +46,8 @@ SIGNED_NUMBER: ["+"|"-"] NUMBER
 //
 // TODO: Working escaped_string
 //
-UNESCAPED_STRING: /\"[^"]*\"/
+_STRING_INNER: /(?:[^"\\]|\\.)*?/
+ESCAPED_STRING : "\"" _STRING_INNER "\""
 
 
 
