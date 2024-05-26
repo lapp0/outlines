@@ -5,13 +5,14 @@ import numba
 
 import outlines
 
-from .common import setup_tokenizer
+from .common import clear_outlines_cache, setup_tokenizer
 
 outlines.disable_cache()
 
 
 class NumbaCompileBenchmark:
     def setup(self):
+        clear_outlines_cache()
         from outlines.fsm import regex
 
         self.tokenizer = setup_tokenizer()
