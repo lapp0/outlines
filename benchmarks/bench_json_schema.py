@@ -5,7 +5,11 @@ outlines.disable_cache()
 from outlines.fsm.guide import RegexGuide  # noqa: E402
 from outlines.fsm.json_schema import build_regex_from_schema  # noqa: E402
 
-from .common import ensure_numba_compiled, setup_tokenizer  # noqa: E402
+from .common import (  # noqa: E402
+    clear_outlines_cache,
+    ensure_numba_compiled,
+    setup_tokenizer,
+)
 
 simple_schema = """{
         "$defs": {
@@ -70,6 +74,7 @@ class JsonSchemaBenchmark:
     params = schemas.keys()
 
     def setup(self, schema_name):
+        clear_outlines_cache()
         self.tokenizer = setup_tokenizer()
         self.schema = schemas[schema_name]
         ensure_numba_compiled(self.tokenizer)

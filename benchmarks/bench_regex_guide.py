@@ -1,6 +1,6 @@
 import outlines
 
-from .common import ensure_numba_compiled, setup_tokenizer
+from .common import clear_outlines_cache, ensure_numba_compiled, setup_tokenizer
 
 outlines.disable_cache()
 
@@ -23,6 +23,7 @@ class RegexGuideBenchmark:
     params = regex_samples.keys()
 
     def setup(self, pattern_name):
+        clear_outlines_cache()
         self.tokenizer = setup_tokenizer()
         ensure_numba_compiled(self.tokenizer)
         self.pattern = regex_samples[pattern_name]
@@ -35,6 +36,7 @@ class MemoryRegexGuideBenchmark:
     params = ["simple_phone", "complex_span_constrained_relation_extraction"]
 
     def setup(self, pattern_name):
+        clear_outlines_cache()
         self.tokenizer = setup_tokenizer()
         ensure_numba_compiled(self.tokenizer)
         self.pattern = regex_samples[pattern_name]
