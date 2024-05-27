@@ -52,7 +52,7 @@ test = [
     "accelerate",
     "beartype<0.16.0",
     "responses",
-    "llama-cpp-python",
+    "llama-cpp-python",#
     "huggingface_hub",
     "openai>=1.0.0",
     "vllm",
