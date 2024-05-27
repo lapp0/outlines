@@ -1,5 +1,3 @@
-from typing import Sequence
-
 import interegular
 import numba
 import numpy as np
@@ -12,6 +10,7 @@ from outlines.fsm.regex import (
     create_fsm_index_tokenizer,
     fsm_union,
     get_sub_fsms_from_seq,
+    get_tokens_trans_keys,
     make_byte_level_better_fsm,
     make_byte_level_fsm,
     make_deterministic_fsm,
@@ -28,9 +27,39 @@ def to_bytes(s):
     return [chr(b) if b < 0x80 else f"\x00{b:02X}" for b in s.encode("utf-8")]
 
 
-def walk_fsm_numba(
+def merge_symbols(byte_hexs):
+    return "".join(["\x00" + b if len(b) == 2 else b for b in byte_hexs])
+
+
+def token_str_to_trans_key(fsm, input_string):
+    vocabulary_nb = numba.typed.List.empty_list(
+        numba.types.Tuple((numba.types.unicode_type, numba.int64[:]))
+    )
+    vocabulary_nb.append((input_string, np.fromiter([1], dtype=np.dtype("int64"))))
+    return get_tokens_trans_keys(
+        fsm.fsm_info.alphabet_symbol_mapping,
+        fsm.fsm_info.alphabet_anything_value,
+        vocabulary_nb,
+    )[0]
+
+
+def walk_fsm_from_token_str(
     fsm,
-    input_string: Sequence[str],
+    input_string: str,
+    start_state: int,
+    full_match: bool = True,
+):
+    return walk_fsm(
+        fsm,
+        token_str_to_trans_key(fsm, input_string),
+        start_state,
+        full_match,
+    )
+
+
+def walk_fsm_from_token_str_numba(
+    fsm,
+    input_string: str,
     start_state: int,
     full_match: bool = True,
 ):
@@ -40,7 +69,7 @@ def walk_fsm_numba(
         fsm.fsm_info.alphabet_anything_value,
         fsm.fsm_info.initial,
         fsm.fsm_info.finals,
-        input_string,
+        token_str_to_trans_key(fsm, input_string),
         start_state,
         full_match=full_match,
     )
@@ -49,8 +78,8 @@ def walk_fsm_numba(
 @pytest.mark.parametrize(
     "function",
     [
-        walk_fsm,
-        walk_fsm_numba,
+        walk_fsm_from_token_str,
+        walk_fsm_from_token_str_numba,
     ],
 )
 def test_walk_fsm(function):
@@ -99,8 +128,8 @@ def test_walk_fsm(function):
 @pytest.mark.parametrize(
     "function",
     [
-        walk_fsm,
-        walk_fsm_numba,
+        walk_fsm_from_token_str,
+        walk_fsm_from_token_str_numba,
     ],
 )
 @pytest.mark.parametrize(
@@ -116,25 +145,35 @@ def test_walk_fsm_multi_bytes(function, transform):
     regex_fsm = make_byte_level_better_fsm(str_regex_fsm, keep_utf8=True)
 
     res = tuple(
-        function(regex_fsm, "".join(transform("😂")), regex_fsm.initial, full_match=True)
-    )
-    assert res[-1:] == (1,)
-
-    res = tuple(
         function(
-            regex_fsm, "".join(transform("😂😂")), regex_fsm.initial, full_match=False
+            regex_fsm, merge_symbols(transform("😂")), regex_fsm.initial, full_match=True
         )
     )
     assert res[-1:] == (1,)
 
     res = tuple(
-        function(regex_fsm, "".join(transform("!")), regex_fsm.initial, full_match=True)
+        function(
+            regex_fsm,
+            merge_symbols(transform("😂😂")),
+            regex_fsm.initial,
+            full_match=False,
+        )
+    )
+    assert res[-1:] == (1,)
+
+    res = tuple(
+        function(
+            regex_fsm, merge_symbols(transform("!")), regex_fsm.initial, full_match=True
+        )
     )
     assert res == tuple()
 
     res = tuple(
         function(
-            regex_fsm, "".join(transform("😂😂")), regex_fsm.initial, full_match=True
+            regex_fsm,
+            merge_symbols(transform("😂😂")),
+            regex_fsm.initial,
+            full_match=True,
         )
     )
     assert res == tuple()
@@ -202,14 +241,14 @@ def test_get_sub_fsms_from_seq():
     assert fsm.accepts("+=")
     assert fsm.accepts("+")
 
-    state_seq = walk_fsm(fsm, "def", fsm.initial)
+    state_seq = walk_fsm_from_token_str(fsm, "def", fsm.initial)
     state_seq.insert(0, fsm.fsm_info.initial)
 
     res = list(get_sub_fsms_from_seq(state_seq, fsms_to_trans_finals))
     assert res == [(0, False, True), (2, True, True)]
 
     # Make sure the old-to-new state map is correct
-    def_state_seq = walk_fsm(def_fsm, "def", fsm.initial)
+    def_state_seq = walk_fsm_from_token_str(def_fsm, "def", fsm.initial)
     def_state_seq.insert(0, fsm.fsm_info.initial)
 
     def_old_to_new_states = fsms_to_trans_finals[0][2]
@@ -218,13 +257,13 @@ def test_get_sub_fsms_from_seq():
         for old_state, new_state in zip(def_state_seq, state_seq)
     )
 
-    state_seq = walk_fsm(fsm, "ef", fsm.initial)
+    state_seq = walk_fsm_from_token_str(fsm, "ef", fsm.initial)
     state_seq.insert(0, fsm.initial)
 
     res = list(get_sub_fsms_from_seq(state_seq, fsms_to_trans_finals))
     assert res == [(2, True, True)]
 
-    name_state_seq = walk_fsm(name_fsm, "ef", fsm.initial)
+    name_state_seq = walk_fsm_from_token_str(name_fsm, "ef", fsm.initial)
     name_state_seq.insert(0, fsm.initial)
 
     name_old_to_new_states = fsms_to_trans_finals[2][2]
@@ -233,13 +272,13 @@ def test_get_sub_fsms_from_seq():
         for old_state, new_state in zip(name_state_seq, state_seq)
     )
 
-    state_seq = walk_fsm(fsm, "match", fsm.initial)
+    state_seq = walk_fsm_from_token_str(fsm, "match", fsm.initial)
     state_seq.insert(0, fsm.initial)
 
     res = list(get_sub_fsms_from_seq(state_seq, fsms_to_trans_finals))
     assert res == [(1, False, True), (2, True, True)]
 
-    match_state_seq = walk_fsm(match_fsm, "match", fsm.initial)
+    match_state_seq = walk_fsm_from_token_str(match_fsm, "match", fsm.initial)
     match_state_seq.insert(0, fsm.initial)
 
     match_old_to_new_states = fsms_to_trans_finals[1][2]
@@ -248,25 +287,25 @@ def test_get_sub_fsms_from_seq():
         for old_state, new_state in zip(match_state_seq, state_seq)
     )
 
-    state_seq = walk_fsm(fsm, "defa", fsm.initial)
+    state_seq = walk_fsm_from_token_str(fsm, "defa", fsm.initial)
     state_seq.insert(0, fsm.initial)
 
     res = list(get_sub_fsms_from_seq(state_seq, fsms_to_trans_finals))
     assert res == [(2, True, True)]
 
-    state_seq = walk_fsm(fsm, "de", fsm.initial)
+    state_seq = walk_fsm_from_token_str(fsm, "de", fsm.initial)
     state_seq.insert(0, fsm.initial)
 
     res = list(get_sub_fsms_from_seq(state_seq, fsms_to_trans_finals))
     assert res == [(0, True, False), (2, True, True)]
 
-    state_seq = walk_fsm(fsm, "+", fsm.initial, False)
+    state_seq = walk_fsm_from_token_str(fsm, "+", fsm.initial, False)
     state_seq.insert(0, fsm.initial)
 
     res = list(get_sub_fsms_from_seq(state_seq, fsms_to_trans_finals))
     assert res == [(3, True, False), (4, False, True)]
 
-    state_seq = walk_fsm(fsm, "+=", fsm.initial)
+    state_seq = walk_fsm_from_token_str(fsm, "+=", fsm.initial)
     state_seq.insert(0, fsm.initial)
 
     res = list(get_sub_fsms_from_seq(state_seq, fsms_to_trans_finals))
@@ -318,7 +357,7 @@ def test_create_fsm_index_end_to_end():
         )
     )
     for token_tuple, token_ids in vocabulary.items():
-        token = "".join(token_tuple)
+        token = merge_symbols(token_tuple)
         token_ids_np = np.fromiter(token_ids, dtype=np.dtype("int64"))
         vocabulary_nb.append((token, token_ids_np))
 
@@ -333,10 +372,6 @@ def test_create_fsm_index_end_to_end_multi_byte():
     regex_pattern = interegular.parse_pattern(regex_str)
     regex_fsm, _ = make_deterministic_fsm(regex_pattern.to_fsm().reduce())
     byte_fsm = make_byte_level_better_fsm(regex_fsm, keep_utf8=True)
-
-    merge_symbols = lambda byte_hexs: "".join(
-        ["" + b if len(b) == 2 else b for b in byte_hexs]
-    )
 
     vocabulary = {
         "blah": numba.typed.List([0]),
