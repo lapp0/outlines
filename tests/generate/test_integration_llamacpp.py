@@ -1,4 +1,6 @@
+import ast
 import datetime
+import json
 import re
 
 import pytest
@@ -243,10 +245,24 @@ def test_llamacpp_json_schema(model):
     assert isinstance(result["bar"], str)
 
 
-def test_llamacpp_cfg(model):
-    prompt = "<|im_start|>user\nOutput a short and valid JSON object with two keys.<|im_end|>\n><|im_start|>assistant\n"
-    result = generate.cfg(model, grammars.arithmetic)(prompt, seed=11)
-    assert isinstance(result, str)
+@pytest.mark.parametrize(
+    "grammar,validator,query",
+    [
+        (grammars.json, json.loads, "short and valid JSON object with two keys."),
+        (
+            grammars.arithmetic,
+            ast.parse,
+            "a mathematical expression with plus minus times and divide.",
+        ),
+    ],
+)
+def test_llamacpp_cfg(model, grammar, validator, query):
+    prompt = f"<|im_start|>user\nOutput a {query}<|im_end|>\n><|im_start|>assistant\n"
+    result = generate.cfg(model, grammar)(prompt, seed=11)
+    try:
+        validator(result)
+    except Exception:
+        raise Exception(f"Failed to validate. output = `{result}`")
 
 
 @pytest.mark.parametrize(
