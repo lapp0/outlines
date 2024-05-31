@@ -46,8 +46,8 @@ jobs:
 
         # Run benchmarks, writing comment contents to ./output
         asv continuous upstream/main HEAD \
-            --split --factor=1.01 --no-stats --interleave-rounds -a repeat=3  > output
-        asv compare --factor=1.01 --no-stats --split upstream/main HEAD >> output
+            --split --factor=1.01 --no-stats --interleave-rounds -a repeat=3
+        asv compare --factor=1.01 --no-stats --split upstream/main HEAD | tee output
         mv output ${{ env.BENCHMARKS_OUTPUT }}
 
     - name: BENCHMARK RESULTS
