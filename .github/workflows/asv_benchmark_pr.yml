@@ -1,0 +1,72 @@
+name: Benchmark PR
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read  # Read access for repository contents
+  pull-requests: write  # Write access for pull requests
+
+env:
+  PYTHON_VERSION: "3.10"
+  WORKING_DIR: ${{ github.workspace }}/benchmarks
+
+jobs:
+  benchmark-pr:
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: ${{ env.WORKING_DIR }}
+
+    steps:
+
+    - name: Checkout repository
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install asv virtualenv lf-asv-formatter
+
+    - name: Create ASV machine config file
+      run: asv machine --machine gh-runner --yes
+
+    - name: Save comparison of PR against main branch
+      run: |
+        # prepare main branch for comparison
+        git remote add upstream https://github.com/${{ github.repository }}.git
+        git fetch upstream main
+
+        # Run benchmarks, writing comment contents to ./output
+        asv continuous upstream/main HEAD \
+            --factor 1.1 --sort ratio --split --interleave-rounds -a repeat=3
+        asv compare upstream/main HEAD --factor 1.1 --sort ratio --split | tee output
+        python -m lf_asv_formatter --asv_version "$(echo asv --version)"
+        printf "Benchmark Suite Results:\n\n" >> comment_body
+        cat output >> comment_body
+
+    # from https://github.com/hombit/load_ztfdr_for_tape/blob/9acf7c83/.github/workflows/asv-pr.yml
+    - name: Find benchmarks comment
+      uses: peter-evans/find-comment@v2
+      id: find-comment
+      with:
+        issue-number: ${{ github.event.pull_request.number }}
+        comment-author: 'github-actions[bot]'
+        body-includes: Benchmark Suite Results
+
+    - name: Create or update benchmarks comment
+      uses: peter-evans/create-or-update-comment@v3
+      with:
+        comment-id: ${{ steps.find-comment.outputs.comment-id }}
+        issue-number: ${{ github.event.pull_request.number }}
+        body-path: ${{ env.WORKING_DIR }}/comment_body
+        edit-mode: replace
