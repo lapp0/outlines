@@ -740,12 +740,6 @@ def create_fsm_index_end_to_end(
     seen: Set[int] = set()
     next_states = {fsm_info.initial}
 
-    pbar = tqdm(
-        total=len(set(fsm_info.transitions.values()))
-        + 1,  # all transitions plus initial
-        desc="Compiling FSM index for all state transitions",
-    )
-
     all_token_transitions = get_all_token_transitions(
         fsm_info.alphabet_symbol_mapping,
         fsm_info.alphabet_anything_value,
@@ -753,6 +747,12 @@ def create_fsm_index_end_to_end(
     )
 
     vocab_trie = VocabTrie(all_token_transitions, vocabulary)
+
+    pbar = tqdm(
+        total=len(set(fsm_info.transitions.values()))
+        + 1,  # all transitions plus initial
+        desc="Compiling FSM index for all state transitions",
+    )
 
     while next_states:
         start_state = next_states.pop()

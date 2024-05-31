@@ -3,6 +3,14 @@ from typing import List, Optional, Sequence, Tuple
 
 import numpy as np
 from numba import njit, typed, types
+from numba.cpython.hashing import (
+    _Py_uhash_t,
+    _PyHASH_XXPRIME_1,
+    _PyHASH_XXPRIME_2,
+    _PyHASH_XXPRIME_5,
+    _PyHASH_XXROTATE,
+    process_return,
+)
 from numba.experimental import jitclass, structref
 from numba.extending import overload
 from numba.typed import Dict
@@ -40,11 +48,26 @@ structref.define_proxy(IntArrayDict, IntArrayDictType, ["wrapped_dict"])
 
 @njit
 def hash_key(key):
-    """Unique hash for int64[:] keys"""
-    key_hash_sum = 0
+    """
+    XXH64 Hash for int64[:] keys
+    adapted from https://github.com/numba/numba/blob/556545/numba/cpython/hashing.py
+    """
+    acc = _PyHASH_XXPRIME_5
     for i in range(key.shape[0]):
-        key_hash_sum += hash(hash(key[i]) + i)
-    return hash(key_hash_sum)
+        x = key[i]
+        lane = hash(x)
+        if lane == _Py_uhash_t(-1):
+            return -1
+        acc += lane * _PyHASH_XXPRIME_2
+        acc = _PyHASH_XXROTATE(acc)
+        acc *= _PyHASH_XXPRIME_1
+
+    acc += key.shape[0] ^ (_PyHASH_XXPRIME_5 ^ _Py_uhash_t(3527539))
+
+    if acc == _Py_uhash_t(-1):
+        return process_return(1546275796)
+
+    return process_return(acc)
 
 
 @overload(IntArrayDict)
@@ -113,7 +136,7 @@ IntArrayToIntArrayType = IntArrayDictType(
             types.DictType(types.int64, nb_int64_array_type),
         ),
         ("token_to_token_ids", IntArrayToIntArrayType),
-    ]
+    ],
 )
 class VocabTrie:
     """
@@ -162,12 +185,13 @@ class VocabTrie:
         # Initialize an empty array for the root token key to store child token keys
         self.token_key_to_child_token_keys[-1] = np.empty((0,), types.int64)
 
-        # It's necessary to insert shorter tokens (prefixes) first
-        sorted_vocabulary = sorted(vocabulary, key=lambda x: len(x[0]))
+        # It's necessary to insert shorter transition sequences (prefixes) first
+        sorted_idx_transition_seq = sorted(
+            enumerate(all_token_transitions), key=lambda x: len(x[1])
+        )
 
-        for idx, (token_transitions, (_, token_ids)) in enumerate(
-            zip(all_token_transitions, sorted_vocabulary)
-        ):
+        for idx, token_transitions in sorted_idx_transition_seq:
+            token_ids = vocabulary[idx][1]
             if token_transitions not in self.token_to_token_key:
                 # create bimapping between token and token_key (tokens trie node key)
                 self.token_to_token_key[token_transitions] = idx
@@ -175,8 +199,9 @@ class VocabTrie:
 
                 # find parent token key
                 parent_token_key = -1  # root token
-                for i in range(0, len(token_transitions)):
+                for i in range(len(token_transitions) - 1, -1, -1):
                     prefix_token = token_transitions[:i]
+
                     if prefix_token in self.token_to_token_key:
                         parent_token_key = self.token_to_token_key[prefix_token]
                         break
@@ -185,6 +210,7 @@ class VocabTrie:
                     self.token_key_to_child_token_keys[parent_token_key],
                     np.array([idx]),
                 )
+
                 # map current token to empty list of children
                 self.token_key_to_child_token_keys[idx] = np.empty((0,), types.int64)
 
