@@ -46,7 +46,7 @@ jobs:
 
         # Run benchmarks, writing comment contents to ./output
         asv continuous upstream/main HEAD \
-            --split --factor=1.1 --no-stats --interleave-rounds -a repeat=3
+            --no-stats --interleave-rounds -a repeat=3
 
     - name: BENCHMARK RESULTS
       run: asv compare --factor=1.1 --no-stats --split upstream/main HEAD
