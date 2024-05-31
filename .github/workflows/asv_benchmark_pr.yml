@@ -44,9 +44,9 @@ jobs:
         git remote add upstream https://github.com/${{ github.repository }}.git
         git fetch upstream main
 
-        # Run benchmarks, writing comment contents to ./output
+        # Run benchmarks, allow errors, they will be caught in the next step
         asv continuous upstream/main HEAD \
-            --no-stats --interleave-rounds -a repeat=3
+            --no-stats --interleave-rounds -a repeat=3 || true
 
     - name: BENCHMARK RESULTS
       run: asv compare --factor=1.1 --no-stats --split upstream/main HEAD
