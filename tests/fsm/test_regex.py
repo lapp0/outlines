@@ -9,8 +9,9 @@ from outlines.fsm.regex import (
     create_fsm_index_end_to_end,
     create_fsm_index_tokenizer,
     fsm_union,
+    get_all_token_transitions,
     get_sub_fsms_from_seq,
-    get_tokens_trans_keys,
+    get_token_transitions,
     make_byte_level_better_fsm,
     make_byte_level_fsm,
     make_deterministic_fsm,
@@ -33,15 +34,11 @@ def merge_symbols(byte_hexs):
 
 
 def token_str_to_trans_key(fsm, input_string):
-    vocabulary_nb = numba.typed.List.empty_list(
-        numba.types.Tuple((numba.types.unicode_type, numba.int64[:]))
-    )
-    vocabulary_nb.append((input_string, np.fromiter([1], dtype=np.dtype("int64"))))
-    return get_tokens_trans_keys(
+    return get_token_transitions(
         fsm.fsm_info.alphabet_symbol_mapping,
         fsm.fsm_info.alphabet_anything_value,
-        vocabulary_nb,
-    )[0]
+        input_string,
+    )
 
 
 def walk_fsm_from_token_str(
@@ -598,7 +595,7 @@ def test_token_trans_keys_identical():
     interegular_fsm = regex_pattern.to_fsm().reduce()
     regex_fsm, _ = make_deterministic_fsm(interegular_fsm)
     vocabulary, _ = reduced_vocabulary(tokenizer)
-    token_trans_keys = get_tokens_trans_keys(
+    token_trans_keys = get_all_token_transitions(
         regex_fsm.fsm_info.alphabet_symbol_mapping,
         regex_fsm.fsm_info.alphabet_anything_value,
         vocabulary,
@@ -633,7 +630,7 @@ def test_token_trans_keys_walk_fsm():
     interegular_fsm = regex_pattern.to_fsm().reduce()
     regex_fsm, _ = make_deterministic_fsm(interegular_fsm)
     vocabulary, _ = reduced_vocabulary(tokenizer)
-    token_trans_keys = get_tokens_trans_keys(
+    token_trans_keys = get_all_token_transitions(
         regex_fsm.fsm_info.alphabet_symbol_mapping,
         regex_fsm.fsm_info.alphabet_anything_value,
         vocabulary,
