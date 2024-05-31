@@ -28,6 +28,8 @@ from interegular.fsm import (
 from numba.typed.typedobjectutils import _nonoptional
 from tqdm import tqdm
 
+from outlines.fsm.vocab_trie import VocabTrie
+
 if TYPE_CHECKING:
     from outlines.models.tokenizer import Tokenizer
 
@@ -649,28 +651,37 @@ def state_scan_tokens(
     fsm_initial: int,
     fsm_finals: Set[int],
     vocabulary: List[Tuple[str, Sequence[int]]],
-    token_trans_key_seqs: List[Sequence[int]],
+    vocab_trie: VocabTrie,
     start_state: int,
 ) -> Set[Tuple[int, int]]:
     res = set()
 
-    for (token, token_ids), token_trans_key_seq in zip(
-        vocabulary, token_trans_key_seqs
-    ):
+    # Initialize the stack with tokens having no prefixes
+    stack = numba.typed.List()
+    for token_transitions_seq in vocab_trie.get_children():
+        stack.append(token_transitions_seq)
+
+    # Process the tokens using the stack
+    while len(stack) > 0:
+        token_transition_seq = stack.pop()
         state_seq = _walk_fsm(
             fsm_transitions,
             fsm_initial,
             fsm_finals,
-            token_trans_key_seq,
+            token_transition_seq,
             start_state,
             False,
         )
 
-        if state_seq is not None and len(state_seq) < len(token_trans_key_seq):
+        if state_seq is not None and len(state_seq) < len(token_transition_seq):
             continue
 
-        for token_id in token_ids:
+        for token_id in vocab_trie.get_token_ids(token_transition_seq):
             res.add((token_id, state_seq[-1]))
+
+        # Add successors to the stack
+        for new_token in vocab_trie.get_children(token_transition_seq):
+            stack.append(new_token)
 
     return res
 
@@ -702,7 +713,7 @@ def get_token_transitions(
 
 
 @numba.njit(cache=True, nogil=True)
-def get_tokens_trans_keys(
+def get_all_token_transitions(
     alphabet_symbol_mapping: Dict[str, int],
     alphabet_anything_value: int,
     vocabulary: List[Tuple[str, Sequence[int]]],
@@ -735,11 +746,13 @@ def create_fsm_index_end_to_end(
         desc="Compiling FSM index for all state transitions",
     )
 
-    tokens_trans_key_seqs = get_tokens_trans_keys(
+    all_token_transitions = get_all_token_transitions(
         fsm_info.alphabet_symbol_mapping,
         fsm_info.alphabet_anything_value,
         vocabulary,
     )
+
+    vocab_trie = VocabTrie(all_token_transitions, vocabulary)
 
     while next_states:
         start_state = next_states.pop()
@@ -751,7 +764,7 @@ def create_fsm_index_end_to_end(
             fsm_info.initial,
             fsm_info.finals,
             vocabulary,
-            tokens_trans_key_seqs,
+            vocab_trie,
             start_state,
         )
 
