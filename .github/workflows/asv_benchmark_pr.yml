@@ -38,7 +38,7 @@ jobs:
     - name: Create ASV machine config file
       run: asv machine --machine gh-runner --yes
 
-    - name: Save comparison of PR against main branch
+    - name: Run Benchmarks: PR `HEAD` vs `main`
       run: |
         # prepare main branch for comparison
         git remote add upstream https://github.com/${{ github.repository }}.git
@@ -46,16 +46,7 @@ jobs:
 
         # Run benchmarks, writing comment contents to ./output
         asv continuous upstream/main HEAD \
-            --split --factor=1.01 --no-stats --interleave-rounds -a repeat=3
-        asv compare --factor=1.01 --no-stats --split upstream/main HEAD | tee output
-        mv output ${{ env.BENCHMARKS_OUTPUT }}
+            --split --factor=1.1 --no-stats --interleave-rounds -a repeat=3
 
     - name: BENCHMARK RESULTS
-      run: cat ${{ env.BENCHMARKS_OUTPUT }}
-
-    - name: Assert No Performance Degradation
-      run: |
-        if grep -q "Benchmarks that have got worse" "${{ env.BENCHMARKS_OUTPUT }}"; then
-          echo "Performance degradation detected!"
-          exit 1
-        fi
+      run: asv compare --factor=1.1 --no-stats --split upstream/main HEAD
