@@ -72,7 +72,7 @@ def build_regex_from_schema(schema: str, whitespace_pattern: Optional[str] = Non
     """
     import time
 
-    time.sleep(0.1)
+    time.sleep(0.1);
 
     schema = json.loads(schema)
     Validator.check_schema(schema)
