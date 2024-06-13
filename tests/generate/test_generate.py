@@ -31,6 +31,11 @@ def model_vllm(tmp_path_factory):
     return models.vllm("facebook/opt-125m")
 
 
+@pytest.fixture(scope="session")
+def model_mamba(tmp_path_factory):
+    return models.mamba(model_name="state-spaces/mamba-130m-hf", device="cpu")
+
+
 # TODO: mamba / exllamav2 failing in main, address in https://github.com/outlines-dev/outlines/issues/808
 """
 @pytest.fixture(scope="session")
@@ -41,13 +46,6 @@ def model_exllamav2(tmp_path_factory):
     )
 
 
-@pytest.fixture(scope="session")
-def model_mamba(tmp_path_factory):
-    return models.mamba(
-        model_name="state-spaces/mamba-130m-hf",
-        device="cpu"
-    )
-
 ALL_MODEL_FIXTURES = ("model_llamacpp", "model_mlxlm", "model_transformers", "model_vllm", "model_exllamav2", "model_mamba")
 """
 
@@ -57,6 +55,7 @@ ALL_MODEL_FIXTURES = (
     "model_mlxlm",
     "model_transformers",
     "model_vllm",
+    "model_mamba",
 )
 
 

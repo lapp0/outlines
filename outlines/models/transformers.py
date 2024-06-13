@@ -380,6 +380,8 @@ def transformers(
     device: Optional[str] = None,
     model_kwargs: dict = {},
     tokenizer_kwargs: dict = {},
+    model_class=None,
+    tokenizer_class=None,
 ):
     """Instantiate a model from the `transformers` library and its tokenizer.
 
@@ -402,19 +404,24 @@ def transformers(
     A `TransformersModel` model instance.
 
     """
-    try:
-        from transformers import AutoModelForCausalLM, AutoTokenizer
-    except ImportError:
-        raise ImportError(
-            "The `transformers` library needs to be installed in order to use `transformers` models."
-        )
+    if model_class is None or tokenizer_class is None:
+        try:
+            from transformers import AutoModelForCausalLM, AutoTokenizer
+        except ImportError:
+            raise ImportError(
+                "The `transformers` library needs to be installed in order to use `transformers` models."
+            )
+    if model_class is None:
+        model_class = AutoModelForCausalLM
+    if tokenizer_class is None:
+        tokenizer_class = AutoTokenizer
 
     if device is not None:
         model_kwargs["device_map"] = device
 
-    model = AutoModelForCausalLM.from_pretrained(model_name, **model_kwargs)
+    model = model_class.from_pretrained(model_name, **model_kwargs)
 
     tokenizer_kwargs.setdefault("padding_side", "left")
-    tokenizer = AutoTokenizer.from_pretrained(model_name, **tokenizer_kwargs)
+    tokenizer = tokenizer_class.from_pretrained(model_name, **tokenizer_kwargs)
 
     return Transformers(model, tokenizer)
