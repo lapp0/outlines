@@ -31,11 +31,44 @@ def model_transformers_distilgpt2(tmp_path_factory):
     return models.transformers("distilbert/distilgpt2", device="cpu")
 
 
+@pytest.fixture(scope="session")
+def model_vllm(tmp_path_factory):
+    return models.vllm("facebook/opt-125m")
+
+
+@pytest.fixture(scope="session")
+def model_mamba(tmp_path_factory):
+    return models.mamba(model_name="state-spaces/mamba-130m-hf", device="cpu")
+
+
+@pytest.fixture(scope="session")
+def model_t5(tmp_path_factory):
+    from transformers import T5ForConditionalGeneration
+
+    return models.transformers(
+        "google/t5-efficient-mini", device="cpu", model_class=T5ForConditionalGeneration
+    )
+
+
+# TODO: exllamav2 failing in main, address in https://github.com/outlines-dev/outlines/issues/808
+"""
+@pytest.fixture(scope="session")
+def model_exllamav2(tmp_path_factory):
+    return models.exllamav2(
+        model_path="blockblockblock/TinyLlama-1.1B-Chat-v1.0-bpw4-exl2",
+        device="cpu"
+    )
+"""
+
+
 ALL_MODEL_FIXTURES = (
     "model_llamacpp",
     "model_mlxlm",
     "model_transformers_random",
     "model_transformers_distilgpt2",
+    "model_vllm",
+    "model_mamba",
+    "model_t5",
 )
 
 
