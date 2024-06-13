@@ -36,18 +36,11 @@ def model_mamba(tmp_path_factory):
     return models.mamba(model_name="state-spaces/mamba-130m-hf", device="cpu")
 
 
-# TODO: mamba / exllamav2 failing in main, address in https://github.com/outlines-dev/outlines/issues/808
-"""
 @pytest.fixture(scope="session")
 def model_exllamav2(tmp_path_factory):
-    return models.exllamav2(
-        model_path="blockblockblock/TinyLlama-1.1B-Chat-v1.0-bpw4-exl2",
-        device="cpu"
+    return models.exl2(
+        model_path="blockblockblock/TinyLlama-1.1B-Chat-v1.0-bpw4-exl2", device="cpu"
     )
-
-
-ALL_MODEL_FIXTURES = ("model_llamacpp", "model_mlxlm", "model_transformers", "model_vllm", "model_exllamav2", "model_mamba")
-"""
 
 
 ALL_MODEL_FIXTURES = (
@@ -56,11 +49,12 @@ ALL_MODEL_FIXTURES = (
     "model_transformers",
     "model_vllm",
     "model_mamba",
+    "model_exllamav2",
 )
 
 
 NOT_IMPLEMENTED = {
-    "batch": ["model_llamacpp"],
+    "batch": ["model_llamacpp", "model_mlxlm"],
     "stream": ["model_vllm"],
     "beam_search": ["model_llamacpp"],
 }

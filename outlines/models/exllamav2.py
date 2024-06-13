@@ -1,4 +1,5 @@
 import os
+import warnings
 from typing import TYPE_CHECKING, Optional
 
 if TYPE_CHECKING:
@@ -77,6 +78,7 @@ class ExLlamaV2Model:
     def __call__(self, input_ids: "torch.LongTensor", *_) -> "torch.FloatTensor":
         logits = self.forward(input_ids)
         next_token_logits = logits[..., -1, :]
+        next_token_logits = next_token_logits.to(self.device)
 
         return next_token_logits, None
 
@@ -171,6 +173,15 @@ def exl2(
         raise ImportError(
             "The `exllamav2`, `transformers` and `torch` libraries needs to be installed in order to use `exllamav2` models."
         )
+
+    # If model exists locally, use it, otherwise, assume it's a huggingface hub uri
+    if not os.path.exists(model_path):
+        warnings.warn(
+            f"Model path {model_path} does not exist locally. Attempting to download from Hugging Face Hub."
+        )
+        from huggingface_hub import snapshot_download
+
+        model_path = snapshot_download(repo_id=model_path, repo_type="model")
 
     # Load tokenizer
     if not verbose:
