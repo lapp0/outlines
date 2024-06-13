@@ -8,7 +8,7 @@ if TYPE_CHECKING:
     from transformers import PreTrainedTokenizer
 
     from outlines.generate.api import GenerationParameters, SamplingParameters
-    from outlines.processors import BaseLogitsProcessor
+    from outlines.processors import OutlinesLogitsProcessor
 
 try:
     import mlx.core as mx
@@ -123,7 +123,7 @@ class MLXLM:
         temp: Optional[float],
         top_p: Optional[float],
         sampler: str,
-        logits_processor: "BaseLogitsProcessor",
+        logits_processor: "OutlinesLogitsProcessor",
     ) -> Generator[Tuple[int, float], None, None]:
         """
         Adapted from
@@ -138,7 +138,7 @@ class MLXLM:
                 top_p (float, optional): Nulceus sampling, higher means model considers
                   more less likely words.
                 sampler (str): The sampler string defined by SequenceGeneratorAdapter
-                logits_processor (BaseLogitsProcessor): Augment logits before sampling.
+                logits_processor (OutlinesLogitsProcessor): Augment logits before sampling.
         """
         temperature: float = temp or 1.0
 
@@ -176,10 +176,7 @@ class MLXLM:
             logits = logits[:, -1, :]
 
             if logits_processor is not None:
-                # convert to logits_processor 1d expectation, apply, then convert back
-                logits_1d = logits.reshape(-1)
-                logits_1d = logits_processor(generated_ids, logits_1d)
-                logits = logits_1d.reshape(1, -1)
+                logits = logits_processor(generated_ids, logits)
 
             new_token_single, prob = sample(logits)
             new_token = new_token_single.item()

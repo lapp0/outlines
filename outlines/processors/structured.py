@@ -35,13 +35,13 @@ from outlines.fsm.guide import CFGGuide, Guide, RegexGuide
 from outlines.fsm.json_schema import build_regex_from_schema
 from outlines.integrations.utils import convert_json_schema_to_str
 
-from .base_logits_processor import BaseLogitsProcessor
+from .base_logits_processor import OutlinesLogitsProcessor
 
 if TYPE_CHECKING:
     from outlines.models.tokenizer import Tokenizer
 
 
-class FSMLogitsProcessor(BaseLogitsProcessor):
+class FSMLogitsProcessor(OutlinesLogitsProcessor):
     """Bias generation using a finite state machine.
 
     Attributes
@@ -95,6 +95,7 @@ class FSMLogitsProcessor(BaseLogitsProcessor):
 
         mask = torch.full_like(logits, -math.inf)
         mask[allowed_tokens] = logits[allowed_tokens]
+
         return mask
 
     def copy(self) -> "FSMLogitsProcessor":

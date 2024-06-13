@@ -1,12 +1,17 @@
-from typing import TYPE_CHECKING, List, Optional, Tuple, Union
+import dataclasses
+from threading import Thread
+from typing import TYPE_CHECKING, Iterator, List, Optional, Tuple, Union
 
 from datasets.fingerprint import Hasher
 
+from outlines.generate.api import GenerationParameters, SamplingParameters
 from outlines.models.tokenizer import Tokenizer
 
 if TYPE_CHECKING:
     import torch
     from transformers import PreTrainedModel, PreTrainedTokenizer
+
+    from outlines.processors import OutlinesLogitsProcessor
 
 __all__ = ["transformers"]
 
@@ -129,7 +134,6 @@ class Transformers:
         model: "PreTrainedModel",
         tokenizer: "PreTrainedTokenizer",
     ):
-        self.device = model.device
         self.model = model
         self.tokenizer = TransformerTokenizer(tokenizer)
 
@@ -189,6 +193,186 @@ class Transformers:
         next_token_logits = logits[..., -1, :]
 
         return next_token_logits, kv_cache
+
+    def _make_generate_kwargs(
+        self,
+        generation_parameters: GenerationParameters,
+        sampling_parameters: SamplingParameters,
+    ) -> dict:
+        """
+        Conert outlines generation parameters into the **kwargs dict passed
+        to model.generate()
+        """
+        max_tokens, stop_at, seed = dataclasses.astuple(generation_parameters)
+        sampler, num_samples, top_p, top_k, temperature = dataclasses.astuple(
+            sampling_parameters
+        )
+
+        if sampler != "multinomial":
+            if top_k is not None:
+                raise ValueError(f"{sampler} requires top_k to be None")
+            if top_p is not None:
+                raise ValueError(f"{sampler} requires top_p to be None")
+
+        if sampler == "greedy":
+            if num_samples is not None and num_samples != 1:
+                raise ValueError(f"{sampler} requires num_samples to be 1")
+            if temperature is not None and temperature != 0:
+                raise ValueError(f"{sampler} requires temperature to be 0 or None")
+
+        if isinstance(stop_at, str):
+            stop_at = [stop_at]
+
+        generate_kwargs = dict(
+            max_new_tokens=max_tokens,
+            stop_strings=stop_at,
+            seed=seed,
+            num_return_sequences=(num_samples or 1),
+            top_p=top_p,
+            top_k=top_k,
+            temperature=temperature,
+        )
+
+        if sampler == "multinomial":
+            generate_kwargs["do_sample"] = True
+
+        elif sampler == "beam_search":
+            generate_kwargs["num_beams"] = num_samples
+
+        elif sampler == "greedy":
+            pass
+
+        else:
+            raise TypeError(f"Incompatible Sampler: {sampler}")
+
+        return generate_kwargs
+
+    def generate(
+        self,
+        prompts: Union[str, List[str]],
+        generation_parameters: GenerationParameters,
+        logits_processor: Optional["OutlinesLogitsProcessor"],
+        sampling_parameters: SamplingParameters,
+    ) -> Union[str, List[str]]:
+        """Generate text using `transformers`.
+
+        Arguments
+        ---------
+        prompts
+            A prompt or list of prompts.
+        generation_parameters
+            An instance of `GenerationParameters` that contains the prompt,
+            the maximum number of tokens, stop sequences and seed. All the
+            arguments to `SequenceGeneratorAdapter`'s `__cal__` method.
+        logits_processor
+            The logits processor to use when generating text.
+        sampling_parameters
+            An instance of `SamplingParameters`, a dataclass that contains
+            the name of the sampler to use and related parameters as available
+            in Outlines.
+
+        Returns
+        -------
+        The generated text
+        """
+        from transformers import LogitsProcessorList
+
+        if isinstance(prompts, str):
+            # convert to 2d
+            input_ids, attention_mask = self.tokenizer.encode([prompts])
+        else:
+            input_ids, attention_mask = self.tokenizer.encode(prompts)
+
+        input_ids = input_ids.to(self.model.device)
+        attention_mask = attention_mask.to(self.model.device)
+
+        generate_kwargs = self._make_generate_kwargs(
+            generation_parameters,
+            sampling_parameters,
+        )
+
+        if logits_processor is not None:
+            logits_processor_list = LogitsProcessorList([logits_processor])
+        else:
+            logits_processor_list = None
+
+        full_seq_ids = self.model.generate(
+            input_ids=input_ids,
+            attention_mask=attention_mask,
+            logits_processor=logits_processor_list,
+            **generate_kwargs,
+        )
+        generated_ids = full_seq_ids[:, input_ids.shape[1] :]
+
+        outputs = self.tokenizer.decode(generated_ids)
+
+        if isinstance(prompts, str):
+            # convert back to 1d
+            return outputs[0]
+        else:
+            return outputs
+
+    def stream(
+        self,
+        prompts: Union[str, List[str]],
+        generation_parameters: GenerationParameters,
+        logits_processor: Optional["OutlinesLogitsProcessor"],
+        sampling_parameters: SamplingParameters,
+    ) -> Iterator[str]:
+        """Stream text using `transformers`.
+
+        Arguments
+        ---------
+        prompts
+            A prompt or list of prompts.
+        generation_parameters
+            An instance of `GenerationParameters` that contains the prompt,
+            the maximum number of tokens, stop sequences and seed. All the
+            arguments to `SequenceGeneratorAdapter`'s `__cal__` method.
+        logits_processor
+            The logits processor to use when generating text.
+        sampling_parameters
+            An instance of `SamplingParameters`, a dataclass that contains
+            the name of the sampler to use and related parameters as available
+            in Outlines.
+
+        Returns
+        -------
+        A token generator
+        """
+        from transformers import LogitsProcessorList, TextIteratorStreamer
+
+        if not isinstance(prompts, str):
+            raise TypeError("Cannot stream batch inputs")
+
+        input_ids, attention_mask = self.tokenizer.encode(prompts)
+        input_ids = input_ids.to(self.model.device)
+        attention_mask = attention_mask.to(self.model.device)
+
+        generate_kwargs = self._make_generate_kwargs(
+            generation_parameters,
+            sampling_parameters,
+        )
+
+        if logits_processor is not None:
+            logits_processor_list = LogitsProcessorList([logits_processor])
+        else:
+            logits_processor_list = None
+
+        streamer = TextIteratorStreamer(self.tokenizer.tokenizer)
+        kwargs = dict(
+            input_ids=input_ids,
+            attention_mask=attention_mask,
+            logits_processor=logits_processor_list,
+            streamer=streamer,
+            **generate_kwargs,
+        )
+        thread = Thread(target=self.model.generate, kwargs=kwargs)
+        thread.start()
+        try:
+            yield from streamer
+        finally:
+            thread.join()
 
 
 def transformers(
