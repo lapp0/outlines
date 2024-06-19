@@ -54,6 +54,16 @@ def model_bart(tmp_path_factory):
     )
 
 
+@pytest.fixture(scope="session")
+def model_transformers_multimodal_vision(tmp_path_factory):
+    import torch
+    return models.transformers_multimodal(
+        "llava-hf/llava-v1.6-mistral-7b-hf",
+        device="cuda",
+        model_kwargs=dict(torch_dtype=torch.bfloat16),
+    )
+
+
 # TODO: exllamav2 failing in main, address in https://github.com/outlines-dev/outlines/issues/808
 """
 @pytest.fixture(scope="session")
@@ -73,11 +83,12 @@ ALL_MODEL_FIXTURES = (
     "model_mamba",
     "model_t5",
     "model_bart",
+    "model_transformers_multimodal_vision",
 )
 
 
 NOT_IMPLEMENTED = {
-    "batch": ["model_llamacpp"],
+    "batch": ["model_llamacpp", "model_transformers_multimodal_vision"],
     "stream": ["model_vllm"],
     "beam_search": ["model_llamacpp"],
     "multiple_samples": ["model_llamacpp"],
@@ -102,13 +113,30 @@ REGEX_PATTERNS = [
 ]
 
 
+def get_inputs(fixture_name, batch_size=None):
+    if batch_size is None:
+        prompts = "test"
+    else:
+        prompts = ["abcd", "efgh", "1234", "5678", "foo", "bar", "baz", "bif"][:batch_size]
+
+    if fixture_name.endswith("multimodal_vision"):
+        return {
+            "prompts": "<image> " + prompts if batch_size is None else ["<image> " + p for p in prompts],
+            "media": "https://python-pillow.org/pillow-perf/static/space_pil_lanczos.png"
+        }
+    else:
+        return {"prompts": prompts}
+
+
+
+
 @pytest.mark.parametrize("sampler_name", ("greedy", "multinomial", "beam_search"))
 @pytest.mark.parametrize("model_fixture", ALL_MODEL_FIXTURES)
 def test_generate_text(request, model_fixture, sampler_name):
     model = request.getfixturevalue(model_fixture)
     generator = generate.text(model, getattr(samplers, sampler_name)())
     with enforce_not_implemented(model_fixture, sampler_name):
-        res = generator("test", max_tokens=10)
+        res = generator(**get_inputs(model_fixture), max_tokens=10)
         assert isinstance(res, str)
 
 
@@ -117,7 +145,7 @@ def test_generate_text(request, model_fixture, sampler_name):
 def test_generate_regex(request, model_fixture, pattern):
     model = request.getfixturevalue(model_fixture)
     generator = generate.regex(model, pattern)
-    res = generator("foobarbaz", max_tokens=20)
+    res = generator(**get_inputs(model_fixture), max_tokens=20)
     assert re.fullmatch(pattern, res) is not None, res
 
 
@@ -126,7 +154,7 @@ def test_generate_text_stream(request, model_fixture):
     model = request.getfixturevalue(model_fixture)
     generator = generate.text(model)
     with enforce_not_implemented(model_fixture, "stream"):
-        for token in generator.stream("a b c ", max_tokens=10):
+        for token in generator.stream(**get_inputs(model_fixture), max_tokens=10):
             assert isinstance(token, str)
 
 
@@ -137,7 +165,7 @@ def test_generate_regex_stream(request, model_fixture, pattern):
     generator = generate.regex(model, pattern)
     with enforce_not_implemented(model_fixture, "stream"):
         output = ""
-        for token in generator.stream("output:", max_tokens=20):
+        for token in generator.stream(**get_inputs(model_fixture), max_tokens=20):
             output += token
         assert re.fullmatch(pattern, output) is not None, output
 
@@ -147,7 +175,7 @@ def test_generate_batch_text(request, model_fixture):
     model = request.getfixturevalue(model_fixture)
     generator = generate.text(model)
     with enforce_not_implemented(model_fixture, "batch"):
-        res = generator(["test", "test2"], max_tokens=10)
+        res = generator(**get_inputs(model_fixture, 2), max_tokens=10)
         assert isinstance(res, list)
         assert isinstance(res[0], str)
 
@@ -159,7 +187,7 @@ def test_generate_regex_batch(request, model_fixture, pattern):
     model = request.getfixturevalue(model_fixture)
     generator = generate.regex(model, pattern)
     with enforce_not_implemented(model_fixture, "batch"):
-        outputs = generator(["abc", "123", "123bce", "33aa"], max_tokens=20)
+        outputs = generator(**get_inputs(model_fixture, 4), max_tokens=20)
         for output in outputs:
             assert re.fullmatch(pattern, output) is not None, output
 
@@ -171,7 +199,7 @@ def test_generate_regex_batch_stream(request, model_fixture, pattern):
     generator = generate.regex(model, pattern)
     with enforce_not_implemented(model_fixture, "batch", "stream"):
         outputs = ["", ""]
-        for tokens in generator.stream(["input 0", "input 1"], max_tokens=20):
+        for tokens in generator.stream(**get_inputs(model_fixture, 2), max_tokens=20):
             outputs[0] += tokens[0]
             outputs[1] += tokens[1]
         for output in outputs:
@@ -185,7 +213,7 @@ def test_generate_regex_single_multinomial(request, model_fixture, pattern):
     model = request.getfixturevalue(model_fixture)
     generator = generate.regex(model, pattern, sampler=samplers.multinomial(4))
     with enforce_not_implemented(model_fixture, "multiple_samples"):
-        output_sample_groups = generator("single input", max_tokens=40)
+        output_sample_groups = generator(**get_inputs(model_fixture), max_tokens=40)
         for output in output_sample_groups:
             assert re.fullmatch(pattern, output) is not None, output
 
@@ -202,7 +230,7 @@ def test_generate_regex_batch_multi_sample(
         model, pattern, sampler=getattr(samplers, sampler_name)(4)
     )
     with enforce_not_implemented(model_fixture, "batch", "multiple_samples"):
-        output_batch_groups = generator(["abc", "123", "123bce", "33aa"], max_tokens=40)
+        output_batch_groups = generator(**get_inputs(model_fixture, 4), max_tokens=40)
         for output_sample_groups in output_batch_groups:
             for output in output_sample_groups:
                 assert re.fullmatch(pattern, output) is not None, output

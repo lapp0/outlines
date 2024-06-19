@@ -1,12 +1,19 @@
 from functools import singledispatch
 
 from outlines.fsm.guide import RegexGuide
-from outlines.generate.api import SequenceGenerator, SequenceGeneratorAdapter
-from outlines.models import OpenAI
-from outlines.models.llamacpp import LlamaCpp
-from outlines.models.mlxlm import MLXLM
-from outlines.models.transformers import Transformers
-from outlines.models.vllm import VLLM
+from outlines.generate.api import (
+    MultiModalSequenceGeneratorAdapter,
+    SequenceGenerator,
+    SequenceGeneratorAdapter,
+)
+from outlines.models import (
+    MLXLM,
+    VLLM,
+    LlamaCpp,
+    OpenAI,
+    Transformers,
+    TransformersMultiModal,
+)
 from outlines.samplers import Sampler, multinomial
 
 
@@ -50,6 +57,18 @@ def regex_unified(
 
     logits_processor = RegexLogitsProcessor(regex_str, tokenizer=model.tokenizer)
     return SequenceGeneratorAdapter(model, logits_processor, sampler)
+
+
+@regex.register(TransformersMultiModal)
+def regex_multimodal(
+    model,
+    regex_str: str,
+    sampler: Sampler = multinomial(),
+):
+    from outlines.processors import RegexLogitsProcessor
+
+    logits_processor = RegexLogitsProcessor(regex_str, tokenizer=model.tokenizer)
+    return MultiModalSequenceGeneratorAdapter(model, logits_processor, sampler)
 
 
 @regex.register(LlamaCpp)
