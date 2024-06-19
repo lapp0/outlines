@@ -1,8 +1,19 @@
 from functools import singledispatch
 
 from outlines.fsm.guide import StopAtEOSGuide
-from outlines.generate.api import SequenceGenerator, SequenceGeneratorAdapter
-from outlines.models import MLXLM, VLLM, LlamaCpp, OpenAI, Transformers
+from outlines.generate.api import (
+    MultiModalSequenceGeneratorAdapter,
+    SequenceGenerator,
+    SequenceGeneratorAdapter,
+)
+from outlines.models import (
+    MLXLM,
+    VLLM,
+    LlamaCpp,
+    OpenAI,
+    Transformers,
+    TransformersMultiModal,
+)
 from outlines.samplers import Sampler, multinomial
 
 
@@ -40,6 +51,11 @@ def text(model, sampler: Sampler = multinomial()) -> SequenceGenerator:
 @text.register(Transformers)
 def text_unified(model, sampler: Sampler = multinomial()):
     return SequenceGeneratorAdapter(model, None, sampler)
+
+
+@text.register(TransformersMultiModal)
+def text_multimodal(model, sampler: Sampler = multinomial()):
+    return MultiModalSequenceGeneratorAdapter(model, None, sampler)
 
 
 @text.register(VLLM)

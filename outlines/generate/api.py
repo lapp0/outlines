@@ -1,6 +1,6 @@
 import datetime
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Iterator, List, Optional, Union
+from typing import TYPE_CHECKING, Any, Iterator, List, Optional, Union
 
 from outlines.generate.generator import sequence_generator
 from outlines.samplers import BeamSearchSampler, GreedySampler, MultinomialSampler
@@ -352,11 +352,13 @@ class SequenceGenerator:
                     ]
 
                     generated_sequences = [
-                        self.format_sequence(
-                            self.strip_stop_sequences(sequence, stop_sequences)
+                        (
+                            self.format_sequence(
+                                self.strip_stop_sequences(sequence, stop_sequences)
+                            )
+                            if stop
+                            else sequence
                         )
-                        if stop
-                        else sequence
                         for sequence, stop in zip(
                             generated_sequences, is_stop_at_reached
                         )
@@ -479,6 +481,13 @@ class SequenceGeneratorAdapter:
         """
         return sequence
 
+    def _format(self, sequences):
+        """Apply formatting to every string in a completion."""
+        if isinstance(sequences, list):
+            return [format(sequence) for sequence in sequences]
+        else:
+            return self.format_sequence(sequences)
+
     def __call__(
         self,
         prompts: Union[str, List[str]],
@@ -488,13 +497,6 @@ class SequenceGeneratorAdapter:
         **model_specific_params,
     ):
         """Generate text from a prompt of list of prompts."""
-
-        def format(sequences):
-            """Apply formatting to every string in a completion."""
-            if isinstance(sequences, list):
-                return [format(sequence) for sequence in sequences]
-            else:
-                return self.format_sequence(sequences)
 
         generation_params = self.prepare_generation_parameters(
             max_tokens, stop_at, seed
@@ -508,7 +510,7 @@ class SequenceGeneratorAdapter:
             **model_specific_params,
         )
 
-        return format(completions)
+        return self._format(completions)
 
     def stream(
         self,
@@ -529,3 +531,97 @@ class SequenceGeneratorAdapter:
             self.sampling_params,
             **model_specific_params,
         )
+
+
+class MultiModalSequenceGeneratorAdapter(SequenceGeneratorAdapter):
+    def __call__(  # type: ignore
+        self,
+        prompts: Union[str, List[str]],
+        media: Union[str, Any],
+        max_tokens: Optional[int] = None,
+        stop_at: Optional[Union[str, List[str]]] = None,
+        seed: Optional[int] = None,
+        **model_specific_params,
+    ):
+        """
+        Generate text from a prompt of list of prompts.
+
+        Media: A URI to construct media or media object itself. Used as AutoProcessor argument.
+        """
+        prompts, media = self._prepare_prompts_and_media(prompts, media)
+
+        generation_params = self.prepare_generation_parameters(
+            max_tokens, stop_at, seed
+        )
+
+        completions = self.model.generate(
+            prompts,
+            media,
+            generation_params,
+            self.logits_processor,
+            self.sampling_params,
+            **model_specific_params,
+        )
+
+        return self._format(completions)
+
+    def stream(  # type: ignore
+        self,
+        prompts: Union[str, List[str]],
+        media: Union[str, Any],
+        max_tokens: Optional[int] = None,
+        stop_at: Optional[Union[str, List[str]]] = None,
+        seed: Optional[int] = None,
+        **model_specific_params,
+    ):
+        """Return a text generator from a prompt or a list of prompts."""
+        prompts, media = self._prepare_prompts_and_media(prompts, media)
+        generation_params = self.prepare_generation_parameters(
+            max_tokens, stop_at, seed
+        )
+        return self.model.stream(
+            prompts,
+            media,
+            generation_params,
+            self.logits_processor,
+            self.sampling_params,
+            **model_specific_params,
+        )
+
+    def _prepare_prompts_and_media(
+        self,
+        prompts: Union[str, List[str]],
+        media: Union[str, Any, List[Union[str, Any]]],
+    ) -> Union[Any, List[Any]]:
+        # ensure media is objects, not URI strs
+        if isinstance(media, list):
+            media = [self._load_media(m) if isinstance(m, str) else m for m in media]
+        elif isinstance(media, str):
+            media = self._load_media(media)
+
+        # if batch, ensure identical dimensions
+        if isinstance(media, list) and not isinstance(prompts, list):
+            prompts = [prompts] * len(media)
+        elif isinstance(prompts, list) and not isinstance(media, list):
+            media = [media] * len(prompts)
+        elif isinstance(prompts, list) and isinstance(media, list):
+            if not len(prompts) == len(media):
+                raise TypeError(
+                    "media and prompts batch requests should have same size, got "
+                    f"{len(prompts)} prompts and {len(media)} media"
+                )
+
+        return prompts, media
+
+    @staticmethod
+    def _load_media(media_path):
+        from io import BytesIO
+        from urllib.request import urlopen
+        from urllib.parse import urlparse
+
+        from PIL import Image
+
+        if urlparse(media_path).scheme in ("http", "https", "ftp"):
+            return Image.open(BytesIO(urlopen(media_path).read())).convert("RGB")
+        else:
+            return Image.open(media_path).convert("RGB")
