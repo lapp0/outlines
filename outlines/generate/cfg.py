@@ -2,10 +2,7 @@ from functools import singledispatch
 
 from outlines.fsm.guide import CFGGuide
 from outlines.generate.api import SequenceGenerator, SequenceGeneratorAdapter
-from outlines.models import OpenAI
-from outlines.models.llamacpp import LlamaCpp
-from outlines.models.mlxlm import MLXLM
-from outlines.models.vllm import VLLM
+from outlines.models import MLXLM, VLLM, LlamaCpp, OpenAI, Transformers
 from outlines.samplers import Sampler, multinomial
 
 
@@ -36,25 +33,16 @@ def cfg(model, cfg_str: str, sampler: Sampler = multinomial()) -> SequenceGenera
 
 @cfg.register(MLXLM)
 @cfg.register(VLLM)
-def cfg_unimplemented(
+@cfg.register(LlamaCpp)
+@cfg.register(Transformers)
+def cfg_unified(
     model,
     cfg_str: str,
     sampler: Sampler = multinomial(),
 ):
-    raise NotImplementedError(
-        f"The CFG Logits processor is not available for {type(model)}."
-    )
+    from outlines.processors import CFGLogitsProcessor
 
-
-@cfg.register(LlamaCpp)
-def cfg_llamacpp(
-    model: LlamaCpp,
-    cfg_str: str,
-    sampler: Sampler = multinomial(),
-):
-    from outlines.integrations.llamacpp import CFGLogitsProcessor
-
-    logits_processor = CFGLogitsProcessor(cfg_str, model.model)
+    logits_processor = CFGLogitsProcessor(cfg_str, tokenizer=model.tokenizer)
     return SequenceGeneratorAdapter(model, logits_processor, sampler)
 
 

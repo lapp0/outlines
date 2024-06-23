@@ -11,6 +11,7 @@ from outlines.fsm.regex import (
     make_byte_level_fsm,
     make_deterministic_fsm,
 )
+from outlines.fsm.parsing import PartialLark, terminals_to_fsms
 
 if TYPE_CHECKING:
     from outlines.models.tokenizer import Tokenizer
@@ -256,15 +257,23 @@ class CFGGuide(Guide):
         self.cfg_string = cfg_string
         self.tokenizer = tokenizer
 
-        self.parser = Lark(
+        self.parser = PartialLark(
             cfg_string,
             parser="lalr",
-            lexer="contextual",
-            propagate_positions=False,
-            maybe_placeholders=False,
-            regex=True,
+            deterministic=True,
             import_paths=[grammars.GRAMMAR_PATH],
+            # TODO: old options, not sure we need them, investigate
+            # propagate_positions=False,
+            # maybe_placeholders=False,
+
+            # TODO: old PartialLark options, investigate
+            # start="file_input",
         )
+
+        self.regex_fsm = terminals_to_fsms(self.parser)
+        self.generation = ""
+
+        """
         self.terminal_regexps = dict()
         for terminal in self.parser.terminals:
             if terminal.pattern is not None:
@@ -279,6 +288,7 @@ class CFGGuide(Guide):
         self.check_last = False
         self.proposal_last: List[int] = []
         self.regex_fsm_last: RegexGuide
+        """
 
         self.start_state = 0
         self.final_state = -1
@@ -316,6 +326,9 @@ class CFGGuide(Guide):
         A list that contains the tokens to mask.
 
         """
+
+        import pdb;pdb.set_trace()
+
         if self.is_final_state(state):
             return Write([self.tokenizer.eos_token_id])
 
