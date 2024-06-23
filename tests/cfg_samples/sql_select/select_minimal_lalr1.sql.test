@@ -1,0 +1,5 @@
+SELECT *
+FROM foo
+HAVING
+AVG(foo.bar) > 1
+ORDER BY foo.baz
