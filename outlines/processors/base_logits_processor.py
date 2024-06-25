@@ -1,5 +1,6 @@
+import reprlib
 from abc import abstractmethod
-from typing import TYPE_CHECKING, List, Protocol, Type, Union
+from typing import TYPE_CHECKING, List, Protocol, Type, Union, runtime_checkable
 
 import numpy as np
 import torch
@@ -20,6 +21,7 @@ def is_mlx_array_type(array_type):
     return issubclass(array_type, mx.array)
 
 
+@runtime_checkable
 class OutlinesLogitsProcessor(Protocol):
     """
     Base class for logits processors which normalizes types of logits:
@@ -133,3 +135,35 @@ class OutlinesLogitsProcessor(Protocol):
             raise TypeError(
                 f"Failed to convert torch tensors to target_type `{target_type}`"
             )
+
+    def __repr__(self):
+        return f"{self.__class__.__name__}({reprlib.repr(self.__dict__)})"
+
+    def __or__(self, other):
+        if not isinstance(other, OutlinesLogitsProcessor):
+            raise ValueError(
+                "Can only chain with another OutlinesLogitsProcessor instance."
+            )
+        return ChainedLogitsProcessor([self, other])
+
+
+class ChainedLogitsProcessor(OutlinesLogitsProcessor):
+    """Handle chaining two logits processors to process logits sequentially"""
+
+    processors: List[OutlinesLogitsProcessor]
+
+    def __init__(self, processors: List[OutlinesLogitsProcessor]):
+        self.processors = []
+        for processor in processors:
+            if isinstance(processor, ChainedLogitsProcessor):
+                self.processors.extend(processor.processors)
+            else:
+                self.processors.append(processor)
+
+    def process_logits(
+        self, input_ids: List[List[int]], logits: torch.Tensor
+    ) -> torch.Tensor:
+        result = logits
+        for processor in self.processors:
+            result = processor.process_logits(input_ids, result)
+        return result
