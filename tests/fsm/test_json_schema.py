@@ -18,10 +18,49 @@ from outlines.fsm.json_schema import (
     TIME,
     UUID,
     WHITESPACE,
+    JSONSchemaRegexGenerator,
     build_regex_from_schema,
     get_schema_from_signature,
-    to_regex,
 )
+
+
+def assert_patterns_equivalent(
+    generated_pattern, expected_pattern, n_diff=4, allow_both=False
+):
+    gen_fsm = interegular.parse_pattern(generated_pattern).to_fsm()
+    expect_fsm = interegular.parse_pattern(expected_pattern).to_fsm()
+    if gen_fsm.reduce() != expect_fsm.reduce():
+        if n_diff:
+            to_str = lambda s: "".join([c if isinstance(c, str) else "{*}" for c in s])
+            only_generated = [
+                to_str(s)
+                for _, s in zip(range(n_diff), gen_fsm.difference(expect_fsm).strings())
+            ]
+            only_expected = [
+                to_str(s)
+                for _, s in zip(range(n_diff), expect_fsm.difference(gen_fsm).strings())
+            ]
+            additional_details = (
+                f"Accepted only by generated pattern (max {n_diff}): {only_generated}\n"
+                f"Accepted only by expected pattern (max {n_diff}): {only_expected}\n"
+            )
+            if allow_both:
+                both = [
+                    to_str(s)
+                    for _, s in zip(range(n_diff), (gen_fsm & expect_fsm).strings())
+                ]
+                additional_details += (
+                    f"Accepted by both patterns (max {n_diff}): {both}\n"
+                )
+        else:
+            additional_details = ""
+
+        raise ValueError(
+            "Patterns Not Equivalent:\n"
+            f"generated_pattern = {generated_pattern}\n"
+            f"expected_pattern = {expected_pattern}\n"
+            f"{additional_details}"
+        )
 
 
 def test_function_basic():
@@ -71,7 +110,7 @@ def test_from_pydantic():
 )
 def test_match_integer(pattern, does_match):
     step = {"title": "Foo", "type": "integer"}
-    regex = to_regex(None, step)
+    regex = JSONSchemaRegexGenerator().to_regex(step)
     assert regex == INTEGER
 
     value = pattern["integer"]
@@ -98,7 +137,7 @@ def test_match_integer(pattern, does_match):
 )
 def test_match_number(pattern, does_match):
     step = {"title": "Foo", "type": "number"}
-    regex = to_regex(None, step)
+    regex = JSONSchemaRegexGenerator().to_regex(step)
     assert regex == NUMBER
 
     value = pattern["number"]
@@ -420,7 +459,7 @@ def test_match_number(pattern, does_match):
         # array
         (
             {"title": "Foo", "type": "array", "items": {"type": "number"}},
-            rf"\[{WHITESPACE}(({NUMBER})(,{WHITESPACE}({NUMBER})){{0,}})?{WHITESPACE}\]",
+            rf"\[(({WHITESPACE}({NUMBER})((?:{WHITESPACE},{WHITESPACE}({NUMBER}))){{,}}{WHITESPACE})|{WHITESPACE})\]",
             [("[1e+9,1.3]", True), ("[]", True), ("[1", False)],
         ),
         # array with a set length of 1
@@ -444,7 +483,7 @@ def test_match_number(pattern, does_match):
                 "minItems": 3,
                 "maxItems": 3,
             },
-            rf"\[{WHITESPACE}(({INTEGER})(,{WHITESPACE}({INTEGER})){{2,2}}){WHITESPACE}\]",
+            rf"\[({WHITESPACE}({INTEGER})((?:{WHITESPACE},{WHITESPACE}({INTEGER}))){{2,2}}{WHITESPACE})\]",
             [("[1]", False), ("[]", False), ("[1,2,3]", True), ("[1,2,3,4]", False)],
         ),
         # array with length 0
@@ -473,7 +512,7 @@ def test_match_number(pattern, does_match):
                 },
                 "required": ["test_dict"],
             },
-            rf"""\{{{WHITESPACE}"test_dict"{WHITESPACE}:{WHITESPACE}\{{{WHITESPACE}({STRING}{WHITESPACE}:{WHITESPACE}{STRING}({WHITESPACE},{WHITESPACE}{STRING}{WHITESPACE}:{WHITESPACE}{STRING}){{0,}})?{WHITESPACE}\}}{WHITESPACE}\}}""",
+            rf"""\{{{WHITESPACE}"test_dict"{WHITESPACE}:{WHITESPACE}(\{{({WHITESPACE}{STRING}{WHITESPACE}:{WHITESPACE}({STRING})({WHITESPACE},{WHITESPACE}{STRING}{WHITESPACE}:{WHITESPACE}({STRING})){{0,}})?{WHITESPACE}\}}){WHITESPACE}\}}""",
             [
                 ("""{ "test_dict":{"foo":"bar","baz": "bif"}}""", True),
                 ("""{ "test_dict":{"foo":"bar" }}""", True),
@@ -499,7 +538,7 @@ def test_match_number(pattern, does_match):
                 },
                 "required": ["test_dict"],
             },
-            rf"""\{{{WHITESPACE}"test_dict"{WHITESPACE}:{WHITESPACE}\{{{WHITESPACE}({STRING}{WHITESPACE}:{WHITESPACE}\{{{WHITESPACE}({STRING}{WHITESPACE}:{WHITESPACE}{INTEGER}({WHITESPACE},{WHITESPACE}{STRING}{WHITESPACE}:{WHITESPACE}{INTEGER}){{0,}})?{WHITESPACE}\}}({WHITESPACE},{WHITESPACE}{STRING}{WHITESPACE}:{WHITESPACE}\{{{WHITESPACE}({STRING}{WHITESPACE}:{WHITESPACE}{INTEGER}({WHITESPACE},{WHITESPACE}{STRING}{WHITESPACE}:{WHITESPACE}{INTEGER}){{0,}})?{WHITESPACE}\}}){{0,}})?{WHITESPACE}\}}{WHITESPACE}\}}""",
+            rf"""\{{{WHITESPACE}"test_dict"{WHITESPACE}:{WHITESPACE}(\{{({WHITESPACE}{STRING}{WHITESPACE}:{WHITESPACE}\{{({WHITESPACE}{STRING}{WHITESPACE}:{WHITESPACE}{INTEGER}({WHITESPACE},{WHITESPACE}{STRING}{WHITESPACE}:{WHITESPACE}{INTEGER}){{0,}})?{WHITESPACE}\}}({WHITESPACE},{WHITESPACE}{STRING}{WHITESPACE}:{WHITESPACE}\{{({WHITESPACE}{STRING}{WHITESPACE}:{WHITESPACE}{INTEGER}({WHITESPACE},{WHITESPACE}{STRING}{WHITESPACE}:{WHITESPACE}{INTEGER}){{0,}})?{WHITESPACE}\}}){{0,}})?{WHITESPACE}\}}){WHITESPACE}\}}""",
             [
                 (
                     """{"test_dict": {"foo": {"bar": 123, "apple": 99}, "baz": {"bif": 456}}}""",
@@ -749,10 +788,14 @@ def test_match_number(pattern, does_match):
     ],
 )
 def test_match(schema, regex, examples):
-    interegular.parse_pattern(regex)
     schema = json.dumps(schema)
     test_regex = build_regex_from_schema(schema)
-    assert test_regex == regex
+
+    # patterns assert equivalence of pattern behavior to expectation
+    assert_patterns_equivalent(generated_pattern=test_regex, expected_pattern=regex)
+
+    # ensure pattern can be parsed by interegular
+    interegular.parse_pattern(regex)
 
     for string, does_match in examples:
         match = re.fullmatch(test_regex, string)
@@ -982,6 +1025,7 @@ def test_format_without_regex(schema, examples):
     for string, does_match in examples:
         match = re.fullmatch(test_regex, string)
         if does_match:
+            assert match, (test_regex, string)
             assert match[0] == string
             assert match.span() == (0, len(string))
         else:
