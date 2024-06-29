@@ -4,6 +4,7 @@ from typing import List, Literal, Union
 
 import interegular
 import pytest
+import yaml
 from pydantic import BaseModel, Field, constr
 
 from outlines.fsm.json_schema import (
@@ -20,12 +21,14 @@ from outlines.fsm.json_schema import (
     WHITESPACE,
     JSONSchemaRegexGenerator,
     build_regex_from_schema,
+    dump_yaml,
     get_schema_from_signature,
+    load_yaml,
 )
 
 
 def assert_patterns_equivalent(
-    generated_pattern, expected_pattern, n_diff=4, allow_both=False
+    generated_pattern, expected_pattern, n_diff=0, allow_both=False
 ):
     gen_fsm = interegular.parse_pattern(generated_pattern).to_fsm()
     expect_fsm = interegular.parse_pattern(expected_pattern).to_fsm()
@@ -787,23 +790,39 @@ def test_match_number(pattern, does_match):
         ),
     ],
 )
-def test_match(schema, regex, examples):
+@pytest.mark.parametrize("mode", ["json", "yaml"])
+def test_match(schema, regex, examples, mode):
     schema = json.dumps(schema)
-    test_regex = build_regex_from_schema(schema)
+    generated_pattern = build_regex_from_schema(schema, mode=mode)
 
-    # patterns assert equivalence of pattern behavior to expectation
-    assert_patterns_equivalent(generated_pattern=test_regex, expected_pattern=regex)
+    if mode == "json":
+        # patterns assert equivalence of pattern behavior to expectation
+        assert_patterns_equivalent(
+            generated_pattern=generated_pattern, expected_pattern=regex
+        )
 
     # ensure pattern can be parsed by interegular
     interegular.parse_pattern(regex)
 
     for string, does_match in examples:
-        match = re.fullmatch(test_regex, string)
+        if mode == "yaml":
+            try:
+                sample = dump_yaml(json.loads(string))
+            except json.decoder.JSONDecodeError:
+                assert not does_match, f"failed to decode example string: {string}"
+                return
+            # ensure yaml wasn't corrupted by rstrip
+            assert load_yaml(sample) == json.loads(string)
+
+        else:
+            sample = string
+
+        match = re.fullmatch(generated_pattern, sample)
         if does_match:
             if match is None:
-                raise ValueError(f"Expected match for '{string}'")
-            assert match[0] == string
-            assert match.span() == (0, len(string))
+                raise ValueError(f"Expected match for '{sample}'")
+            assert match[0] == sample
+            assert match.span() == (0, len(sample))
         else:
             assert match is None
 
