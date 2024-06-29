@@ -1,3 +1,4 @@
+import collections
 import json
 import re
 from typing import List, Literal, Union
@@ -21,9 +22,7 @@ from outlines.fsm.json_schema import (
     WHITESPACE,
     JSONSchemaRegexGenerator,
     build_regex_from_schema,
-    dump_yaml,
     get_schema_from_signature,
-    load_yaml,
 )
 
 
@@ -64,6 +63,69 @@ def assert_patterns_equivalent(
             f"expected_pattern = {expected_pattern}\n"
             f"{additional_details}"
         )
+
+
+def dump_yaml_normalized(data):
+    """
+    yaml can represent the same data in many different ways.
+
+    This function creates a normalized yaml dump which ensures
+    - strings are always represented with quotes
+    - OrderedDict is represented without !!python/object/apply:collections.OrderedDict
+    - End of document signifier "\n...\n" is removed
+    """
+    class NormalizedDumper(yaml.Dumper):
+        pass
+
+    def quoted_str_presenter(dumper, data):
+        return dumper.represent_scalar("tag:yaml.org,2002:str", data, style='"')
+
+    def dict_representer(dumper, data):
+        return dumper.represent_dict(data.items())
+
+    NormalizedDumper.add_representer(str, quoted_str_presenter)
+    NormalizedDumper.add_representer(collections.OrderedDict, dict_representer)
+
+    return yaml.dump(data, Dumper=NormalizedDumper).rstrip("\n...\n")
+
+
+def assert_match_expectation(json_sample, pattern, does_match, schema, mode="json"):
+    """
+    Ensure sample conforms to `does_match` expectation
+    - check sample normally if in json mode
+    - convert sample to normalized yaml if in yaml mode
+    """
+    # if yaml mode, convert to yaml if possible, otherwise succeed the test
+    if mode == "yaml":
+        try:
+            if json.dumps(json.loads(json_sample)) != json_sample:
+                return
+        except json.decoder.JSONDecodeError:
+            return
+
+        sample = dump_yaml_normalized(json.loads(json_sample, object_pairs_hook=collections.OrderedDict))
+
+        # ensure yaml wasn't corrupted by rstrip
+        assert yaml.safe_load(sample) == json.loads(json_sample), "invalid test, json -> yaml inconsistent"
+
+    else:
+        sample = json_sample
+
+    match = re.fullmatch(pattern, sample)
+
+    if does_match:
+        if match is None:
+            #fsm = interegular.parse_pattern(pattern).to_fsm().reduce()
+            #import pdb;pdb.set_trace()
+            raise ValueError(
+                f"Expected match for sample:\n{sample}\n\n"
+                f"Schema: {json.dumps(json.loads(schema), indent=4)}\n"
+                f"Generated Pattern: {repr(pattern)}\n"
+            )
+        assert match[0] == sample
+        assert match.span() == (0, len(sample))
+    else:
+        assert match is None
 
 
 def test_function_basic():
@@ -805,26 +867,7 @@ def test_match(schema, regex, examples, mode):
     interegular.parse_pattern(regex)
 
     for string, does_match in examples:
-        if mode == "yaml":
-            try:
-                sample = dump_yaml(json.loads(string))
-            except json.decoder.JSONDecodeError:
-                assert not does_match, f"failed to decode example string: {string}"
-                return
-            # ensure yaml wasn't corrupted by rstrip
-            assert load_yaml(sample) == json.loads(string)
-
-        else:
-            sample = string
-
-        match = re.fullmatch(generated_pattern, sample)
-        if does_match:
-            if match is None:
-                raise ValueError(f"Expected match for '{sample}'")
-            assert match[0] == sample
-            assert match.span() == (0, len(sample))
-        else:
-            assert match is None
+        assert_match_expectation(string, generated_pattern, does_match, schema, mode=mode)
 
 
 @pytest.mark.parametrize(
@@ -889,19 +932,15 @@ def test_match(schema, regex, examples, mode):
         ),
     ],
 )
-def test_format(schema, regex, examples):
+@pytest.mark.parametrize("mode", ["json", "yaml"])
+def test_format(schema, regex, examples, mode):
     interegular.parse_pattern(regex)
     schema = json.dumps(schema)
-    test_regex = build_regex_from_schema(schema)
-    assert test_regex == regex
+    generated_pattern = build_regex_from_schema(schema, mode=mode)
+    assert generated_pattern == regex
 
     for string, does_match in examples:
-        match = re.fullmatch(test_regex, string)
-        if does_match:
-            assert match[0] == string
-            assert match.span() == (0, len(string))
-        else:
-            assert match is None
+        assert_match_expectation(string, generated_pattern, does_match, schema, mode=mode)
 
 
 @pytest.mark.parametrize(
@@ -1038,17 +1077,12 @@ def test_format(schema, regex, examples):
         ),
     ],
 )
-def test_format_without_regex(schema, examples):
+@pytest.mark.parametrize("mode", ["json", "yaml"])
+def test_format_without_regex(schema, examples, mode):
     schema = json.dumps(schema)
-    test_regex = build_regex_from_schema(schema)
+    generated_pattern = build_regex_from_schema(schema, mode=mode)
     for string, does_match in examples:
-        match = re.fullmatch(test_regex, string)
-        if does_match:
-            assert match, (test_regex, string)
-            assert match[0] == string
-            assert match.span() == (0, len(string))
-        else:
-            assert match is None
+        assert_match_expectation(string, generated_pattern, does_match, schema, mode=mode)
 
 
 @pytest.mark.parametrize("whitespace_pattern", [None, r"[\n ]*", "abc"])
