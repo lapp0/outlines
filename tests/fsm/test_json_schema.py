@@ -60,7 +60,7 @@ def assert_patterns_equivalent(
         raise ValueError(
             "Patterns Not Equivalent:\n"
             f"generated_pattern = {generated_pattern}\n"
-            f"expected_pattern = {expected_pattern}\n"
+            f" expected_pattern = {expected_pattern}\n"
             f"{additional_details}"
         )
 
@@ -74,6 +74,7 @@ def dump_yaml_normalized(data):
     - OrderedDict is represented without !!python/object/apply:collections.OrderedDict
     - End of document signifier "\n...\n" is removed
     """
+
     class NormalizedDumper(yaml.Dumper):
         pass
 
@@ -103,10 +104,14 @@ def assert_match_expectation(json_sample, pattern, does_match, schema, mode="jso
         except json.decoder.JSONDecodeError:
             return
 
-        sample = dump_yaml_normalized(json.loads(json_sample, object_pairs_hook=collections.OrderedDict))
+        sample = dump_yaml_normalized(
+            json.loads(json_sample, object_pairs_hook=collections.OrderedDict)
+        )
 
         # ensure yaml wasn't corrupted by rstrip
-        assert yaml.safe_load(sample) == json.loads(json_sample), "invalid test, json -> yaml inconsistent"
+        assert yaml.safe_load(sample) == json.loads(
+            json_sample
+        ), "invalid test, json -> yaml inconsistent"
 
     else:
         sample = json_sample
@@ -115,8 +120,10 @@ def assert_match_expectation(json_sample, pattern, does_match, schema, mode="jso
 
     if does_match:
         if match is None:
-            #fsm = interegular.parse_pattern(pattern).to_fsm().reduce()
-            #import pdb;pdb.set_trace()
+            fsm = interegular.parse_pattern(pattern).to_fsm().reduce()
+            import pdb
+
+            pdb.set_trace()
             raise ValueError(
                 f"Expected match for sample:\n{sample}\n\n"
                 f"Schema: {json.dumps(json.loads(schema), indent=4)}\n"
@@ -867,7 +874,9 @@ def test_match(schema, regex, examples, mode):
     interegular.parse_pattern(regex)
 
     for string, does_match in examples:
-        assert_match_expectation(string, generated_pattern, does_match, schema, mode=mode)
+        assert_match_expectation(
+            string, generated_pattern, does_match, schema, mode=mode
+        )
 
 
 @pytest.mark.parametrize(
@@ -940,7 +949,9 @@ def test_format(schema, regex, examples, mode):
     assert generated_pattern == regex
 
     for string, does_match in examples:
-        assert_match_expectation(string, generated_pattern, does_match, schema, mode=mode)
+        assert_match_expectation(
+            string, generated_pattern, does_match, schema, mode=mode
+        )
 
 
 @pytest.mark.parametrize(
@@ -1082,7 +1093,9 @@ def test_format_without_regex(schema, examples, mode):
     schema = json.dumps(schema)
     generated_pattern = build_regex_from_schema(schema, mode=mode)
     for string, does_match in examples:
-        assert_match_expectation(string, generated_pattern, does_match, schema, mode=mode)
+        assert_match_expectation(
+            string, generated_pattern, does_match, schema, mode=mode
+        )
 
 
 @pytest.mark.parametrize("whitespace_pattern", [None, r"[\n ]*", "abc"])

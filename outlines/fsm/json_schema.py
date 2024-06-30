@@ -52,6 +52,7 @@ def dump_yaml(data: Any) -> str:
     - OrderedDict is represented without !!python/object/apply:collections.OrderedDict
     - End of document signifier "\n...\n" is removed
     """
+
     class NormalizedDumper(yaml.Dumper):
         pass
 
@@ -243,7 +244,7 @@ class JSONSchemaRegexGenerator:
         self.recursion_level = recursion_level
 
     def _default_context(self):
-        return Context(depth=0, container_depth=0)
+        return Context(recursion_depth=0, container_stack=[])
 
     def _validate_node(self, node):
         if node is False:
@@ -256,6 +257,9 @@ class JSONSchemaRegexGenerator:
             "unevaluatedItems",
             "contains",
             "patternProperties",
+            "maximum",
+            "default",
+            "__proto__",
         ]
         # keys coinciding within same object not handled
         not_implemented_key_pairs = [
@@ -270,18 +274,16 @@ class JSONSchemaRegexGenerator:
             if not (set(k) - set(node.keys())):
                 raise NotImplementedError(f"Cannot simultaneously use the keys: {k}")
 
-    def to_regex(self, node: dict, ctx: Optional[Context] = None, incr_container_depth=True):
+    def to_regex(self, node: dict, ctx: Optional[Context] = None):
         if ctx is None:
             ctx = self._default_context()
         else:
-            ctx = ctx.update(depth=ctx.depth + 1)
-            if incr_container_depth:
-                ctx = ctx.update(container_depth=ctx.container_depth + 1)
+            ctx = ctx.update(recursion_depth=ctx.recursion_depth + 1)
 
         if node is True:
             node = {}
 
-        if ctx.depth > 256:
+        if ctx.recursion_depth > 256:
             # hacky prevention of recursive schemas
             raise NotImplementedError("Recursive schemas are illegal")
 
@@ -316,12 +318,14 @@ class JSONSchemaRegexGenerator:
                 handler = self.visit_many_types
             else:
                 # Determine the type of node or default to generic handling
-                handler = getattr(self, f"visit_{node['type']}", self.visit_default)
+                handler = getattr(
+                    self, f"visit_{node['type']}", self.visit_notimplemented
+                )
         else:
-            handler = self.visit_default
+            handler = self.visit_notimplemented
 
         pattern = handler(node, ctx)
-        if ctx.depth == 0:
+        if ctx.recursion_depth == 0:
             return pattern
         return rf"({pattern})"
 
@@ -390,17 +394,6 @@ class JSONSchemaRegexGenerator:
             return self.format_string_format(node["format"])
         return self.format_string()
 
-    def visit_array(self, node: dict, ctx: Context):
-        min_items = node.get("minItems")
-        max_items = node.get("maxItems")
-
-        if "items" in node:
-            items_regex = self.to_regex(node["items"], ctx)
-        else:
-            items_regex = self._create_depth_limited_unconstrained(node, ctx)
-
-        return self.format_array(items_regex, ctx, min_items, max_items)
-
     def visit_object(self, node: dict, ctx: Context):
         """
         Handles object with no constraints, properties, or additionalProperties
@@ -413,6 +406,7 @@ class JSONSchemaRegexGenerator:
         TODO: the json-schema compliant implementation is as follows:
         - properties and additionalProperties can both be set simultaneously
         """
+        ctx = ctx.update(container_stack=ctx.container_stack + ["object"])
 
         properties = node.get("properties", {})
         required_properties = node.get("required", [])
@@ -464,42 +458,25 @@ class JSONSchemaRegexGenerator:
                 max_properties=max_properties,
             )
 
-    def visit_enum(self, node: dict, ctx: Context):
-        """
-        The enum keyword is used to restrict a value to a fixed set of values. It
-        must be an array with at least one element, where each element is unique.
-        """
-        choices = [self.format_literal(choice) for choice in node["enum"]]
-        return self._regex_xor(choices)
+    def visit_array(self, node: dict, ctx: Context):
+        ctx = ctx.update(container_stack=ctx.container_stack + ["array"])
 
-    def visit_ref(self, node: dict, ctx: Context):
-        path = node["$ref"]
-        if path == "#":
-            raise NotImplementedError("Recursive schemas aren't supported")
-        new_node = self.resolver.lookup(path).contents
-        return self.to_regex(new_node, ctx, incr_container_depth=False)
+        min_items = node.get("minItems")
+        max_items = node.get("maxItems")
 
-    def visit_allOf(self, node: dict, ctx: Context):
-        subpatterns = [self.to_regex(subschema, ctx, incr_container_depth=False) for subschema in node["allOf"]]
-        return self._regex_and(subpatterns)
+        if "items" in node:
+            items_regex = self.to_regex(node["items"], ctx)
+        else:
+            items_regex = self._create_depth_limited_unconstrained(node, ctx)
 
-    def visit_anyOf(self, node: dict, ctx: Context):
-        subpatterns = [self.to_regex(subschema, ctx, incr_container_depth=False) for subschema in node["anyOf"]]
-        # TODO: implement correctly
-        # return self._regex_xor(subpatterns)
-        return self._regex_xor(subpatterns)
-
-    def visit_oneOf(self, node: dict, ctx: Context):
-        subpatterns = [self.to_regex(subschema, ctx, incr_container_depth=False) for subschema in node["oneOf"]]
-        return self._regex_xor(subpatterns)
-
-    def visit_not(self, node: dict, ctx: Context):
-        raise NotImplementedError("`not` key in json schema isn't implemented")
+        return self.format_array(items_regex, ctx, min_items, max_items)
 
     def visit_prefixItems(self, node: dict, ctx: Context):
         """
         Create pattern for Tuples, per JSON Schema spec, `prefixItems` determines types at each idx
         """
+        ctx = ctx.update(container_stack=ctx.container_stack + ["array"])
+
         if (
             node.get("items") == True
         ):  # TODO: true impl - unset / None should behave same as True
@@ -515,11 +492,45 @@ class JSONSchemaRegexGenerator:
         prefix_subpatterns = [self.to_regex(item, ctx) for item in node["prefixItems"]]
         return self.format_prefixItems(prefix_subpatterns, ctx, suffix_elem_pattern)
 
-    def visit_many_types(self, node: dict, ctx: Context):
-        subpatterns = [self.to_regex({"type": t}, ctx, incr_container_depth=False) for t in node["type"]]
-        return self._regex_xor(subpatterns)
+    def visit_enum(self, node: dict, ctx: Context):
+        """
+        The enum keyword is used to restrict a value to a fixed set of values. It
+        must be an array with at least one element, where each element is unique.
+        """
+        choices = [self.format_literal(choice) for choice in node["enum"]]
+        return self._regex_or(choices)
 
-    def visit_default(self, node: dict, ctx: Context):
+    def visit_ref(self, node: dict, ctx: Context):
+        path = node["$ref"]
+        if path == "#":
+            raise NotImplementedError("Recursive schemas aren't supported")
+        new_node = self.resolver.lookup(path).contents
+        return self.to_regex(new_node, ctx)
+
+    def visit_allOf(self, node: dict, ctx: Context):
+        subpatterns = [self.to_regex(subschema, ctx) for subschema in node["allOf"]]
+        return self._regex_and(subpatterns)
+
+    def visit_anyOf(self, node: dict, ctx: Context):
+        subpatterns = [self.to_regex(subschema, ctx) for subschema in node["anyOf"]]
+        return self._regex_or(subpatterns)
+
+    def visit_oneOf(self, node: dict, ctx: Context):
+        """
+        TODO: use self._regex_xor
+        """
+        # TODO: INCORRECT
+        subpatterns = [self.to_regex(subschema, ctx) for subschema in node["oneOf"]]
+        return self._regex_or(subpatterns)
+
+    def visit_not(self, node: dict, ctx: Context):
+        raise NotImplementedError("`not` key in json schema isn't implemented")
+
+    def visit_many_types(self, node: dict, ctx: Context):
+        subpatterns = [self.to_regex({"type": t}, ctx) for t in node["type"]]
+        return self._regex_or(subpatterns)
+
+    def visit_notimplemented(self, node: dict, ctx: Context):
         raise NotImplementedError(
             f"Handler for {node.get('type', node)} is not implemented"
         )
@@ -568,8 +579,6 @@ class JSONSchemaRegexGenerator:
         else:
             num_items_pattern = "*"
 
-        # TODO: 1.0 is a valid integer per json schema spec
-        # return rf"(-)?(0|[1-9][0-9]{num_items_pattern})(\.0)?"
         return rf"(-)?(0|[1-9][0-9]{num_items_pattern})"
 
     def format_string(self):
@@ -580,9 +589,6 @@ class JSONSchemaRegexGenerator:
 
     def format_string_pattern(self, pattern: str):
         return f'"{pattern[1:-1] if pattern[0] == "^" and pattern[-1] == "$" else pattern}"'
-
-    def format_string_const(self, const: Any):
-        return re.escape(json.dumps(const))
 
     def format_string_format(self, fmt: str):
         format_regex = format_to_regex.get(fmt)
@@ -657,7 +663,10 @@ class JSONSchemaRegexGenerator:
         return rf"\[{inner}\]"
 
     def format_prefixItems(
-            self, prefix_patterns: List[str], ctx: Context, suffix_elem_pattern: Optional[str] = None
+        self,
+        prefix_patterns: List[str],
+        ctx: Context,
+        suffix_elem_pattern: Optional[str] = None,
     ):
         comma_split_pattern = rf"{self.ws},{self.ws}"
         prefix_pattern = f"{self.ws}{comma_split_pattern.join(prefix_patterns)}"
@@ -675,22 +684,44 @@ class JSONSchemaRegexGenerator:
         return rf"\[{inner}\]"
 
     def format_literal(self, literal: Any):
-        if type(literal) in [int, float, bool, type(None), str]:
+        if type(literal) in [int, bool, type(None), str]:
             return re.escape(json.dumps(literal))
+        elif isinstance(literal, float):
+            if float(literal) == int(literal):
+                int_literal = re.escape(json.dumps(int(literal)))
+                float_literal = re.escape(json.dumps(float(literal)))
+                return f"({int_literal}|{float_literal})"
+            else:
+                return re.escape(json.dumps(literal))
         else:
             raise NotImplementedError(
                 f"Unsupported data type in literal: {type(literal)}"
             )
 
     def _regex_and(self, patterns: List[str]):
-        pat = "".join(patterns)
-        return f"{(pat)}"
-
-    def _regex_xor(self, patterns: List[str]):
-        pat = "|".join(patterns)
-        return f"{(pat)}"
+        """Use positive lookaheads to AND patterns"""
+        pattern = "".join(patterns)
+        return f"{(pattern)}"
 
     def _regex_or(self, patterns: List[str]):
+        pattern = "|".join(patterns)
+        return f"{(pattern)}"
+
+    def _regex_xor(self, patterns: List[str]):
+        """
+        TODO
+
+        XOR proposed implementation, we should be cautious that this doesn't produce absurdly large patterns though
+        ```
+        >>> pat = str(greenery.parse(".oo") ^ greenery.parse("f.."))
+        >>> pat
+        '[^f]o{2}|f([^o].|o[^o])'
+
+        >>> re.fullmatch(pat, "foo")
+        >>> re.fullmatch(pat, "boo")
+        <re.Match object; span=(0, 3), match='boo'>
+        ```
+        """
         raise NotImplementedError
 
     def _regex_repeat_elem(
@@ -735,13 +766,16 @@ class JSONSchemaRegexGenerator:
             {"type": "integer"},
             {"type": "string"},
         ]
-        allowed_depth = node.get("_allowed_depth", ctx.container_depth + self.recursion_level)
+        container_depth = len(ctx.container_stack)
+        allowed_depth = node.get(
+            "_allowed_depth", container_depth + self.recursion_level
+        )
         # We limit the object depth to keep the expression finite, but the "depth"
         # key is not a true component of the JSON Schema specification.
-        if ctx.container_depth < allowed_depth:
+        if container_depth < allowed_depth:
             legal_types.append({"type": "object", "_allowed_depth": allowed_depth})
             legal_types.append({"type": "array", "_allowed_depth": allowed_depth})
-        return self.visit_oneOf({"oneOf": legal_types}, ctx.update(container_depth=ctx.container_depth + 1))
+        return self.visit_anyOf({"anyOf": legal_types}, ctx)
 
 
 class YAMLRegexGenerator(JSONSchemaRegexGenerator):
@@ -774,19 +808,20 @@ class YAMLRegexGenerator(JSONSchemaRegexGenerator):
         ]
         is_required = [prop["is_required"] for prop in property_details]
 
+        container_depth = len(ctx.container_stack[:-1])
+
         create_property_pattern = (
-            lambda key_pat, value_pat, indent_level:
-            f"{' ' * indent_level}{key_pat}:{self.ws}{value_pat}"
+            lambda key_pat, value_pat: f"{key_pat}:{self.ws}{value_pat}"
         )
 
         inner = ""
-        indent_level = ctx.container_depth * 2
-        separator_pattern = f"\n{' ' * indent_level}"
+        separator_pattern = f"\n{' ' * container_depth * 2}"
         if any(is_required):
             last_required_pos = max([i for i, value in enumerate(is_required) if value])
             for i, (key_pattern, value_pattern) in enumerate(properties):
                 subregex = create_property_pattern(
-                    key_pattern, value_pattern, indent_level
+                    key_pattern,
+                    value_pattern,
                 )
                 if i < last_required_pos:
                     subregex = f"({subregex}{separator_pattern})"
@@ -795,7 +830,7 @@ class YAMLRegexGenerator(JSONSchemaRegexGenerator):
                 inner += subregex if is_required[i] else f"({subregex})?"
         else:
             property_subregexes = [
-                create_property_pattern(key_pattern, value_pattern, indent_level)
+                create_property_pattern(key_pattern, value_pattern)
                 for key_pattern, value_pattern in properties
             ]
             possible_patterns = []
@@ -809,7 +844,7 @@ class YAMLRegexGenerator(JSONSchemaRegexGenerator):
                 possible_patterns.append(pattern)
             inner += f"({'|'.join(possible_patterns)})?"
 
-        if ctx.container_depth > 0:
+        if container_depth > 0 and ctx.container_stack[-2] == "object":
             inner = separator_pattern + inner
 
         return inner
@@ -817,14 +852,15 @@ class YAMLRegexGenerator(JSONSchemaRegexGenerator):
     def format_object_with_additional_properties(
         self, value_pattern: str, ctx: Context, min_properties=None, max_properties=None
     ):
-        separator_pattern = f"\n{' ' * ctx.container_depth * 2}"
+        container_depth = len(ctx.container_stack[:-1])
+        separator_pattern = f"\n{' ' * container_depth * 2}"
         inner = self._regex_repeat_elem(
             elem_pattern=f"({STRING}){self.ws}:{self.ws}({value_pattern})",
             separator_pattern=separator_pattern,
             min_elem=min_properties,
             max_elem=max_properties,
         )
-        if ctx.container_depth > 0:
+        if container_depth > 0 and ctx.container_stack[-2] == "object":
             inner = separator_pattern + inner
         if min_properties in (0, "0", "", None):
             empty_object_pattern = r"(\{\})"
@@ -835,24 +871,29 @@ class YAMLRegexGenerator(JSONSchemaRegexGenerator):
     def format_array(
         self, elem_pattern: str, ctx: Context, min_items=None, max_items=None
     ):
-        separator_pattern = f"\n{' ' * ctx.container_depth * 2}"
+        container_depth = len(ctx.container_stack[:-1])
+        separator_pattern = f"\n{' ' * container_depth * 2}"
         inner = self._regex_repeat_elem(
             elem_pattern=f"- ({elem_pattern})",
             separator_pattern=separator_pattern,
             min_elem=min_items,
             max_elem=max_items,
         )
-        if ctx.container_depth > 0:
-            inner = separator_pattern + inner
+        if container_depth > 0:
+            inner = inner
         if min_items in (0, "0", "", None):
             empty_list_pattern = r"(\[\])"
             return f"({inner})|({empty_list_pattern})"
         return inner
 
     def format_prefixItems(
-        self, prefix_patterns: List[str], ctx: Context, suffix_elem_pattern: Optional[str] = None
+        self,
+        prefix_patterns: List[str],
+        ctx: Context,
+        suffix_elem_pattern: Optional[str] = None,
     ):
-        separator_pattern = f"\n{' ' * ctx.container_depth * 2}"
+        container_depth = len(ctx.container_stack[:-1])
+        separator_pattern = f"\n{' ' * container_depth * 2}"
 
         prefix_patterns = [f"- ({pat})" for pat in prefix_patterns]
         prefix_pattern = f"{separator_pattern.join(prefix_patterns)}"
