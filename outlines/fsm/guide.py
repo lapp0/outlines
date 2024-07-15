@@ -1,7 +1,18 @@
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, List, Optional, Protocol, Tuple, Union
+from typing import (
+    TYPE_CHECKING,
+    Callable,
+    Dict,
+    List,
+    Optional,
+    Protocol,
+    Set,
+    Tuple,
+    Union,
+)
 
 import interegular
+import torch
 from lark import Lark
 
 from outlines import grammars
@@ -107,16 +118,44 @@ class StopAtEOSGuide(Guide):
 
 @cache()
 def create_states_mapping(
-    regex_string: str, tokenizer: "Tokenizer"
-) -> Tuple[dict, set, set]:
+    regex_string: str,
+    tokenizer: "Tokenizer",
+    regex_parser: Callable[[str], interegular.Pattern] = interegular.parse_pattern,
+    frozen_tokens: List[str] = [],
+) -> Tuple[Dict[int, Dict[int, int]], Set[int], set]:
     """Create the variables related to the mapping between states and tokens
-    The parameters of the function are used for caching purpose
+    The parameters of the function are used for caching purpose.
+
+    Parameters
+    ----------
+    regex_string: (`str`):
+        The regular expression string to generate a states mapping for.
+    tokenizer: (`Tokenizer`):
+        The model's tokenizer.
+    regex_parser: (`Callable[[str], interegular.Pattern]`, *optional*):
+        A function that parses a regex string into an `interegular` Pattern object.
+    frozen_tokens: (`List[str]`, *optional*):
+        A list of tokens that should be kept as-is when expanding the token-level FSM
+        into a byte-level FSM. Defaults to an empty list.
+
+    Returns
+    -------
+    states_to_token_maps: (`Dict[int, Dict[int, int]]`):
+        A mapping from states to a mapping from token ids originating from that state
+        to the next state to transition to given that token. The structure is as follows:
+        (origin_state -> (token_id -> next_state))
+    empty_token_ids: (`Set[int]`):
+        A set of token ids that correspond to empty strings.
+    final_states: (`set`):
+        A set of final states in the FSM.
     """
-    regex_pattern = interegular.parse_pattern(regex_string)
-    byte_fsm = make_byte_level_fsm(regex_pattern.to_fsm().reduce(), keep_utf8=True)
+    regex_pattern = regex_parser(regex_string)
+    byte_fsm = make_byte_level_fsm(
+        regex_pattern.to_fsm().reduce(), keep_utf8=True, frozen_tokens=frozen_tokens
+    )
     regex_fsm, _ = make_deterministic_fsm(byte_fsm)
     states_to_token_maps, empty_token_ids = create_fsm_index_tokenizer(
-        regex_fsm, tokenizer
+        regex_fsm, tokenizer, frozen_tokens=frozen_tokens
     )
 
     # We make sure that it is possible to generate strings in the language
@@ -137,7 +176,7 @@ class RegexGuide(Guide):
 
     initial_state = 0
 
-    def __init__(self, regex_string: str, tokenizer):
+    def __init__(self, regex_string: str, tokenizer: "Tokenizer"):
         (
             self.states_to_token_maps,
             self.empty_token_ids,
@@ -145,6 +184,13 @@ class RegexGuide(Guide):
         ) = create_states_mapping(regex_string, tokenizer)
         self.eos_token_id = tokenizer.eos_token_id
         self.final_states = fsm_finals | {-1}
+
+        # cache returned masks token masks
+        # this increases performance of the mask substantially
+        self.states_to_token_mask = {
+            state: torch.tensor(list(next_tokens_to_end_states.keys()))
+            for state, next_tokens_to_end_states in self.states_to_token_maps.items()
+        }
 
     def get_next_instruction(self, state: int) -> Instruction:
         """Return the next instruction for guided generation.
@@ -169,11 +215,11 @@ class RegexGuide(Guide):
         A `Generate` instance that contains the model and the allowed token ids.
 
         """
-        next_tokens_to_end_states = self.states_to_token_maps.get(state)
-        if next_tokens_to_end_states is None:
-            return Write([self.eos_token_id])
+        next_tokens_mask = self.states_to_token_mask.get(state)
+        if next_tokens_mask is None:
+            return Write(torch.tensor([self.eos_token_id]))
 
-        return Generate(list(next_tokens_to_end_states.keys()))
+        return Generate(next_tokens_mask)
 
     def get_next_state(self, state: int, token_id: int) -> int:
         """Update the state of the guide.
