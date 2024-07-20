@@ -35,7 +35,7 @@ jobs:
           TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "main")
           TAG_EXISTS=$(git describe --tags --exact-match 2>/dev/null && echo "true" || echo "false")
           if [ "$TAG_EXISTS" = "true" ]; then
-            mike deploy --update-aliases --push --branch gh-pages $TAG
+            mike deploy --update-aliases --push --branch gh-pages "$TAG"
             mike set-default stable
           else
             mike deploy --update-aliases --push --branch gh-pages main unstable
