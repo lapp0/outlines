@@ -27,4 +27,17 @@ jobs:
       - name: Build documentation
         env:
           GOOGLE_ANALYTICS_KEY: ${{ secrets.GOOGLE_ANALYTICS_KEY }}
-        run: mike deploy --update-aliases --push --rebase ${{ steps.git.outputs.tag }} stable
+        run: mike deploy --push --update-aliases ${{ steps.git.outputs.tag }} latest
+      - name: Determine version tag
+        id: get-tag
+        run: |
+          if [ -n "${{ github.event.ref_type }}" ] && [ "${{ github.event.ref_type }}" == "tag" ]; then
+            echo "version_tag=${{ github.ref_name }}" >> $GITHUB_ENV
+            echo "alias=stable" >> $GITHUB_ENV
+          else
+            echo "version_tag=latest" >> $GITHUB_ENV
+            echo "alias=main" >> $GITHUB_ENV
+      - name: Build documentation
+        env:
+          GOOGLE_ANALYTICS_KEY: ${{ secrets.GOOGLE_ANALYTICS_KEY }}
+        run: mike deploy --push --update-aliases ${{ env.version_tag }} ${{ env.alias }}
