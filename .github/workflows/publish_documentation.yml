@@ -32,7 +32,7 @@ jobs:
         env:
           GOOGLE_ANALYTICS_KEY: ${{ secrets.GOOGLE_ANALYTICS_KEY }}
         run: |
-          TAG=$(git describe --tags --abbrev=0 || echo "main")
+          TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "main")
           TAG_EXISTS=$(git describe --tags --exact-match 2>/dev/null && echo "true" || echo "false")
           if [ "$TAG_EXISTS" = "true" ]; then
             mike deploy --update-aliases --push --branch gh-pages $TAG
