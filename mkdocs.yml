@@ -6,7 +6,7 @@ site_description: >-
 
 
 # Repository
-repo_name: outlines-dev/outlines
+repo_name: lapp0/outlines
 repo_url: https://github.com/outlines-dev/outlines
 
 # Copyright
@@ -88,7 +88,7 @@ plugins:
       cards_layout_options:
         color: #173a58
   - git-committers:
-      repository: outlines-dev/outlines
+      repository: lapp0/outlines
       branch: main
   - git-revision-date-localized:
       enable_creation_date: true
