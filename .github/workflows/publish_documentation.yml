@@ -31,6 +31,6 @@ jobs:
       - name: Build documentation
         env:
           GOOGLE_ANALYTICS_KEY: ${{ secrets.GOOGLE_ANALYTICS_KEY }}
-	run: |
+        run: |
           mike deploy --push --update-aliases --force $version latest
           mike set-default --push --force latest
