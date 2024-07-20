@@ -41,4 +41,4 @@ jobs:
           GOOGLE_ANALYTICS_KEY: ${{ secrets.GOOGLE_ANALYTICS_KEY }}
         run: |
           mike deploy --update-aliases --push --branch ${{ steps.git.outputs.tag }} unstable
-          mike set-default --push --force unstable
+          mike set-default stable
