@@ -28,17 +28,15 @@ jobs:
         run: |
           git config user.name ${{ github.actor }}
           git config user.email ${{ github.actor }}@users.noreply.github.com
-      - name: Get latest tag or commit SHA
-        id: git
-        run: |
-          TAG=$(git describe --tags --abbrev=0 || echo "no-tags")
-          if [ "$TAG" = "no-tags" ]; then
-            TAG="main"
-          fi
-          echo "::set-output name=tag::$TAG"
       - name: Build documentation
         env:
           GOOGLE_ANALYTICS_KEY: ${{ secrets.GOOGLE_ANALYTICS_KEY }}
         run: |
-          mike deploy --update-aliases --push --branch ${{ steps.git.outputs.tag }} unstable
-          mike set-default stable
+          TAG=$(git describe --tags --abbrev=0 || echo "main")
+          TAG_EXISTS=$(git describe --tags --exact-match 2>/dev/null && echo "true" || echo "false")
+          if [ "$TAG_EXISTS" = "true" ]; then
+            mike deploy --update-aliases --push --branch $TAG stable
+            mike set-default stable
+          else
+            mike deploy --update-aliases --push --branch main unstable
+          fi
