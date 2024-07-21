@@ -30,6 +30,12 @@ jobs:
           restore-keys: |
             mkdocs-material-
       - run: pip install -r requirements-doc.txt
+      - name: Build the documentation
+        env:
+          GOOGLE_ANALYTICS_KEY: ${{ secrets.GOOGLE_ANALYTICS_KEY }}
+        run: |
+          pip install -r requirements-doc.txt
+          mkdocs build
       - name: Set up Git
         run: |
           git config user.name ${{ github.actor }}
