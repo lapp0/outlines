@@ -30,12 +30,6 @@ jobs:
           restore-keys: |
             mkdocs-material-
       - run: pip install -r requirements-doc.txt
-      - name: Build the documentation
-        env:
-          GOOGLE_ANALYTICS_KEY: ${{ secrets.GOOGLE_ANALYTICS_KEY }}
-        run: |
-          pip install -r requirements-doc.txt
-          mkdocs build
       - name: Set up Git
         run: |
           git config user.name ${{ github.actor }}
@@ -45,10 +39,10 @@ jobs:
           GOOGLE_ANALYTICS_KEY: ${{ secrets.GOOGLE_ANALYTICS_KEY }}
         if: ${{ github.ref_type == 'tag' }}
         run: |
-          mike deploy --push --update-aliases ${{ github.ref_name }} latest
+          mike deploy --push --update-aliases --force ${{ github.ref_name }} latest
       - name: Publish main as unstable
         env:
           GOOGLE_ANALYTICS_KEY: ${{ secrets.GOOGLE_ANALYTICS_KEY }}
         if: ${{ github.ref_type == 'branch' }}
         run: |
-          mike deploy --push --update-aliases unstable
+          mike deploy --push --update-aliases --force unstable
