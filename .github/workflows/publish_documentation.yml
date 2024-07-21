@@ -29,7 +29,6 @@ jobs:
           restore-keys: |
             mkdocs-material-
       - run: pip install -r requirements-doc.txt
-      - run: mkdocs gh-deploy --force
       - name: Set up Git
         run: |
           git config user.name ${{ github.actor }}
