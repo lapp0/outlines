@@ -46,8 +46,8 @@ extra:
     provider: google
     property: !ENV GOOGLE_ANALYTICS_KEY
   version:
-    provider: mike  # Enable mike versioning
-    default: stable   # Set default version alias
+    provider: mike
+    default: latest
 
 # Extensions
 markdown_extensions:
