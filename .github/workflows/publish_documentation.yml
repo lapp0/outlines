@@ -42,7 +42,7 @@ jobs:
           GOOGLE_ANALYTICS_KEY: ${{ secrets.GOOGLE_ANALYTICS_KEY }}
         if: github.event_name == 'release'
         run: |
-          mike deploy --push --update-aliases ${{ github.ref_name }} latest
+          mike deploy --push --update-aliases ${{ github.ref_name }} stable
 
       - name: Publish main as unstable
         env:
