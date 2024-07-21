@@ -49,4 +49,4 @@ jobs:
           GOOGLE_ANALYTICS_KEY: ${{ secrets.GOOGLE_ANALYTICS_KEY }}
         if: github.event_name == 'push'
         run: |
-          mike deploy --push ${{ github.ref_name }} unstable
+          mike deploy --push --update-aliases ${{ github.ref_name }} unstable
