@@ -43,7 +43,7 @@ jobs:
         if: github.event_name == 'release'
         run: |
           mike deploy --push --update-aliases ${{ github.ref_name }} latest
-          mike set-default stable
+          mike set-default latest
 
       - name: Publish main as unstable
         env:
