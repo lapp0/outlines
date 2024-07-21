@@ -30,19 +30,23 @@ jobs:
           restore-keys: |
             mkdocs-material-
       - run: pip install -r requirements-doc.txt
+      - run: mkdocs build
+
       - name: Set up Git
         run: |
           git config user.name ${{ github.actor }}
           git config user.email ${{ github.actor }}@users.noreply.github.com
+
       - name: Publish Tag as latest
         env:
           GOOGLE_ANALYTICS_KEY: ${{ secrets.GOOGLE_ANALYTICS_KEY }}
-        if: ${{ github.ref_type == 'tag' }}
+        if: github.event_name == 'release'
         run: |
-          mike deploy --push --update-aliases --force ${{ github.ref_name }} latest
+          mike deploy --push --update-aliases ${{ github.ref_name }} latest
+
       - name: Publish main as unstable
         env:
           GOOGLE_ANALYTICS_KEY: ${{ secrets.GOOGLE_ANALYTICS_KEY }}
-        if: ${{ github.ref_type == 'branch' }}
+        if: github.event_name == 'push'
         run: |
-          mike deploy --push --update-aliases --force unstable
+          mike deploy --push ${{ github.ref_name }} unstable
