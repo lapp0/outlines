@@ -99,7 +99,7 @@
 <polygon fill="none" stroke="black" points="92,-267 92,-288 177,-288 177,-267 92,-267"/>
 <text text-anchor="start" x="123" y="-273.8" font-family="Times,serif" font-size="14.00">0%</text>
 <polygon fill="none" stroke="black" points="30,-246 30,-267 92,-267 92,-246 30,-246"/>
-<text text-anchor="start" x="33" y="-252.8" font-family="Times,serif" font-size="14.00">number</text>
+<text text-anchor="start" x="33" y="-252.8" font-family="Times,serif" font-size="14.00">foo</text>
 <polygon fill="none" stroke="black" points="92,-246 92,-267 177,-267 177,-246 92,-246"/>
 <text text-anchor="start" x="123" y="-252.8" font-family="Times,serif" font-size="14.00">0%</text>
 <polygon fill="none" stroke="black" points="30,-225 30,-246 92,-246 92,-225 30,-225"/>

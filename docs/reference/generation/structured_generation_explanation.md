@@ -10,7 +10,9 @@ Language models generate text token by token, using the previous token sequence 
 
 ## Worked Example
 
-Let's consider a worked example with a pattern for whole and decimal numbers: `^\d*(\.\d+)?$`.
+Let's consider a worked example with a pattern for whole and decimal numbers:
+
+`^\d*(\.\d+)?$`.
 
 ### Creating Automata
 
