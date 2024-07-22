@@ -163,7 +163,7 @@ print(prompt)
 # A:
 ```
 
-### Outlines functions
+### [Outlines functions](./reference/functions.md)
 
 Once you are done experimenting with a prompt and an output structure, it is useful to be able to encapsulate all of these in a single function that can be called from other parts of the program. This is what `outlines.Function` allows you to do:
 
