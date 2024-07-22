@@ -7,6 +7,7 @@
   --md-default-bg-color: #FFFFFF;
   --md-code-bg-color: #2E3440;
   --md-code-fg-color: #FFFFFF;
+  --md-mermaid-label-fg-color: #000000; /* don't inherit white fg color for mermaid diagrams from --md-code-fg-color */
   --md-text-font-family: "Inter";
   --md-code-font: "Source Code Pro Custom";
 
