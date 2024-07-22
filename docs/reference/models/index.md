@@ -1,6 +1,10 @@
-Outlines supports generation using a number of inference engines (`outlines.models`)
+---
+title: Models
+---
 
-# Loading a Model
+# Models
+
+Outlines supports generation using a number of inference engines (`outlines.models`)
 
 Loading a model using outlines follows a similar interface between inference engines.
 
