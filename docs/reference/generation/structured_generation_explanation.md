@@ -19,19 +19,6 @@ The pattern is first converted into an automata. Below is a brief explanation of
 **Automata Diagram:**
 
 ```mermaid
-%%{
-  init: {
-    'theme': 'base',
-    'themeVariables': {
-      'primaryColor': '#BB2528',
-      'primaryTextColor': '#fff',
-      'primaryBorderColor': '#7C0000',
-      'lineColor': '#F8B229',
-      'secondaryColor': '#006100',
-      'tertiaryColor': '#fff'
-    }
-  }
-}%%
 graph LR
     node0("1-9") --> node1("1-9")
     node1 --> node1
@@ -47,19 +34,6 @@ graph LR
 Let's assume that we're in the middle of generation, and so far "748" has been generated. Here is the automata with the current state highlighted in green, with the legal next characters being another number (1-9), a dot (.), or end of sequence.
 
 ```mermaid
-%%{
-  init: {
-    'theme': 'base',
-    'themeVariables': {
-      'primaryColor': '#BB2528',
-      'primaryTextColor': '#fff',
-      'primaryBorderColor': '#7C0000',
-      'lineColor': '#F8B229',
-      'secondaryColor': '#006100',
-      'tertiaryColor': '#fff'
-    }
-  }
-}%%
 graph LR
     node0("1-9") --> node1("1-9")
     node1 --> node1

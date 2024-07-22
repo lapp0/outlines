@@ -78,7 +78,17 @@ extra_css:
 plugins:
   - mermaid2
   - blog
-  - mermaid2
+  - mermaid2:
+      version: '9.4.3' # only works with version < 10
+      arguments:
+        theme: 'dark'
+        themeVariables:
+          primaryColor: '#BB2528'
+          primaryTextColor: '#fff'
+          primaryBorderColor: '#7C0000'
+          lineColor: '#F8B229'
+          secondaryColor: '#006100'
+          tertiaryColor: '#fff'
   - mkdocstrings:
       default_handler: python
       handlers:
