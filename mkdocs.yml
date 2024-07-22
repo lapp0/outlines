@@ -76,6 +76,7 @@ extra_css:
   - stylesheets/extra.css
 
 plugins:
+  - mermaid2
   - blog
   - mermaid2
   - mkdocstrings:
