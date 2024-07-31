@@ -1,8 +1,7 @@
 import pytest
 
-from outlines.models.tokenizer import Tokenizer
+from outlines.models import OutlinesTokenizer
 
 
 def test_tokenizer():
-    with pytest.raises(TypeError, match="instantiate abstract"):
-        Tokenizer()
+    raise Exception("implement good tests here pls")

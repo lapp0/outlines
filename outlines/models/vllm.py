@@ -5,6 +5,8 @@ from transformers import SPIECE_UNDERLINE, PreTrainedTokenizerBase
 
 from outlines.generate.api import GenerationParameters, SamplingParameters
 
+from .tokenizer import OutlinesTokenizer
+
 if TYPE_CHECKING:
     from vllm import LLM
     from vllm.sampling_params import SamplingParams
@@ -24,22 +26,18 @@ class VLLM:
         self.model = model
         self.lora_request = None
 
-        self.tokenizer = self._get_tokenizer()
+        self.outlines_tokenizer = self._get_tokenizer()
 
     def _get_tokenizer(self):
         if hasattr(self.model, "get_tokenizer"):
-            tokenizer = self.model.get_tokenizer()
+            return OutlinesTokenizer.from_tokenizer(self.model.get_tokenizer())
         elif hasattr(self.model, "tokenizer"):
-            if hasattr(self.model.tokenizer, "tokenizer"):
-                tokenizer = self.model.tokenizer.tokenizer
-            else:
-                tokenizer = self.model.tokenizer
+            return OutlinesTokenizer.from_tokenizer(self.model.tokenizer)
         else:
             raise ValueError(
                 "The provided LLM instance neither has a "
                 "`tokenizer` attribute or a `get_tokenizer` method."
             )
-        return adapt_tokenizer(tokenizer=tokenizer)
 
     def generate(
         self,

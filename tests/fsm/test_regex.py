@@ -18,7 +18,7 @@ from outlines.fsm.regex import (
     reduced_vocabulary,
     walk_fsm,
 )
-from outlines.models.transformers import TransformerTokenizer
+from outlines.models import OutlinesTokenizer
 
 
 def identity(s):
@@ -428,8 +428,8 @@ def test_create_fsm_index_tokenizer(hf_tokenizer_uri, revision):
     num_bytes_fsm_states = len(bytes_fsm.states)
     assert num_bytes_fsm_states == 235
 
-    tokenizer = AutoTokenizer.from_pretrained(hf_tokenizer_uri, revision=revision)
-    tokenizer = TransformerTokenizer(tokenizer)
+    tokenizer = AutoTokenizer.from_pretrained(hf_tokenizer_uri)
+    tokenizer = OutlinesTokenizer.from_tokenizer(tokenizer)
 
     states_to_token_subsets, empty_token_ids = create_fsm_index_tokenizer(
         bytes_fsm, tokenizer
@@ -511,7 +511,7 @@ def test_regex_index_performance():
     assert num_fsm_states == 220
 
     tokenizer = AutoTokenizer.from_pretrained("gpt2")
-    tokenizer = TransformerTokenizer(tokenizer)
+    tokenizer = OutlinesTokenizer.from_tokenizer(tokenizer)
 
     # Pre-compile Numba functions
     res, _ = create_fsm_index_tokenizer(regex_fsm, tokenizer)

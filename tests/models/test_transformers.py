@@ -3,14 +3,14 @@ import torch
 from transformers import AutoTokenizer
 from transformers.models.gpt2 import GPT2TokenizerFast
 
-from outlines.models.transformers import TransformerTokenizer, transformers
+from outlines.models import OutlinesTokenizer, transformers
 
 TEST_MODEL = "hf-internal-testing/tiny-random-GPTJForCausalLM"
 
 
 def test_tokenizer():
     tokenizer = AutoTokenizer.from_pretrained(TEST_MODEL, padding_side="left")
-    tokenizer = TransformerTokenizer(tokenizer)
+    tokenizer = OutlinesTokenizer.from_tokenizer(tokenizer)
     assert tokenizer.eos_token_id == 0
     assert tokenizer.pad_token_id == 0
     assert isinstance(tokenizer.tokenizer, GPT2TokenizerFast)
@@ -42,14 +42,14 @@ def test_tokenizer():
     tokenizer = AutoTokenizer.from_pretrained(
         TEST_MODEL, additional_special_tokens=["<t1>", "<t2>"]
     )
-    tokenizer = TransformerTokenizer(tokenizer)
+    tokenizer = OutlinesTokenizer.from_tokenizer(tokenizer)
     assert "<t1>" in tokenizer.special_tokens
     assert "<t2>" in tokenizer.special_tokens
 
 
 def test_llama_tokenizer():
     tokenizer = AutoTokenizer.from_pretrained("hf-internal-testing/llama-tokenizer")
-    tokenizer = TransformerTokenizer(tokenizer)
+    tokenizer = OutlinesTokenizer.from_tokenizer(tokenizer)
 
     # Broken
     assert tokenizer.tokenizer.convert_tokens_to_string(["▁baz"]) == "baz"
@@ -64,15 +64,15 @@ def test_llama_tokenizer():
 
 def test_model():
     model = transformers(TEST_MODEL, device="cpu")
-    assert isinstance(model.tokenizer, TransformerTokenizer)
+    assert isinstance(model.outlines_tokenizer, OutlinesTokenizer)
     assert model.model.device.type == "cpu"
 
     model = transformers(TEST_MODEL, model_kwargs={"device_map": "cpu"})
-    assert isinstance(model.tokenizer, TransformerTokenizer)
+    assert isinstance(model.outlines_tokenizer, OutlinesTokenizer)
     assert model.model.device.type == "cpu"
 
     model = transformers(TEST_MODEL, device="cpu", model_kwargs={"device_map": "cuda"})
-    assert isinstance(model.tokenizer, TransformerTokenizer)
+    assert isinstance(model.outlines_tokenizer, OutlinesTokenizer)
     assert model.model.device.type == "cpu"
 
     input_ids = torch.tensor([[0, 1, 2]])
@@ -103,8 +103,8 @@ def test_model():
 def test_tokenizer_eq_hash():
     tokenizer_hf = AutoTokenizer.from_pretrained("gpt2")
 
-    tokenizer = TransformerTokenizer(tokenizer_hf)
-    tokenizer_2 = TransformerTokenizer(tokenizer_hf)
+    tokenizer = OutlinesTokenizer.from_tokenizer(tokenizer_hf)
+    tokenizer_2 = OutlinesTokenizer.from_tokenizer(tokenizer_hf)
 
     assert tokenizer == tokenizer_2
     assert hash(tokenizer) == hash(tokenizer_2)
@@ -112,6 +112,6 @@ def test_tokenizer_eq_hash():
     tokenizer_hf_2 = AutoTokenizer.from_pretrained("gpt2")
     tokenizer_hf_2.add_tokens(["test_token"])
 
-    tokenizer_3 = TransformerTokenizer(tokenizer_hf_2)
+    tokenizer_3 = OutlinesTokenizer.from_tokenizer(tokenizer_hf_2)
     assert tokenizer != tokenizer_3
     assert hash(tokenizer) != hash(tokenizer_3)

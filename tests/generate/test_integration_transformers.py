@@ -10,7 +10,7 @@ from pydantic import BaseModel, constr
 import outlines.generate as generate
 import outlines.models as models
 from outlines.fsm.regex import reduced_vocabulary
-from outlines.models.transformers import Transformers, TransformerTokenizer
+from outlines.models import OutlinesTokenizer, Transformers
 from outlines.samplers import beam_search, greedy, multinomial
 
 
@@ -434,8 +434,8 @@ def test_transformers_reduced_vocabulary_caching():
     from transformers import AutoTokenizer
 
     hf_tokenizer = AutoTokenizer.from_pretrained("gpt2")
-    tokenizer = TransformerTokenizer(hf_tokenizer)
-    tokenizer2 = TransformerTokenizer(hf_tokenizer)
+    tokenizer = OutlinesTokenizer.from_tokenizer(hf_tokenizer)
+    tokenizer2 = OutlinesTokenizer.from_tokenizer(hf_tokenizer)
 
     # TODO: We might actually want only one copy of a given tokenizer.
     assert tokenizer is not tokenizer2

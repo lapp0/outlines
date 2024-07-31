@@ -1,7 +1,7 @@
 import dataclasses
 from typing import TYPE_CHECKING, Generator, Iterator, List, Optional, Tuple, Union
 
-from .transformers import TransformerTokenizer
+from .tokenizer import OutlinesTokenizer
 
 if TYPE_CHECKING:
     import mlx.core as mx
@@ -24,9 +24,7 @@ class MLXLM:
     ):
         self.model = model
         self.mlx_tokenizer = tokenizer  # returns mlx tensors, used for encode()
-        self.tokenizer = TransformerTokenizer(
-            tokenizer._tokenizer
-        )  # _tokenizer is HF Tokenizer
+        self.outlines_tokenizer = OutlinesTokenizer.from_tokenizer(tokenizer)
 
     def generate(
         self,

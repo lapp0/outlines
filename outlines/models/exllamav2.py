@@ -6,7 +6,7 @@ if TYPE_CHECKING:
     from transformers import PreTrainedTokenizer
     import torch
 
-from .transformers import TransformerTokenizer
+from .tokenizer import OutlinesTokenizer
 
 
 class ExLlamaV2Model:
@@ -22,7 +22,7 @@ class ExLlamaV2Model:
     ):
         self.device = device
         self.model = model
-        self.tokenizer = TransformerTokenizer(tokenizer)
+        self.outlines_tokenizer = OutlinesTokenizer.from_tokenizer(tokenizer)
         self.cache = cache
         self.past_seq = None
         self.lora = lora

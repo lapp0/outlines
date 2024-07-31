@@ -13,7 +13,7 @@ import outlines.samplers as samplers
 
 
 @pytest.fixture(scope="session")
-def model_llamacpp(tmp_path_factory):
+def model_llamacpp2(tmp_path_factory):
     return models.llamacpp(
         repo_id="M4-ai/TinyMistral-248M-v2-Instruct-GGUF",
         filename="TinyMistral-248M-v2-Instruct.Q4_K_M.gguf",

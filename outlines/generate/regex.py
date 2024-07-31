@@ -33,7 +33,9 @@ def regex(model, regex_str: str, sampler: Sampler = multinomial()):
     """
     from outlines.processors import RegexLogitsProcessor
 
-    logits_processor = RegexLogitsProcessor(regex_str, tokenizer=model.tokenizer)
+    logits_processor = RegexLogitsProcessor(
+        regex_str, tokenizer=model.outlines_tokenizer
+    )
     return SequenceGeneratorAdapter(model, logits_processor, sampler)
 
 
@@ -45,7 +47,9 @@ def regex_vision(
 ):
     from outlines.processors import RegexLogitsProcessor
 
-    logits_processor = RegexLogitsProcessor(regex_str, tokenizer=model.tokenizer)
+    logits_processor = RegexLogitsProcessor(
+        regex_str, tokenizer=model.outlines_tokenizer
+    )
     return VisionSequenceGeneratorAdapter(model, logits_processor, sampler)
 
 
@@ -55,7 +59,7 @@ def regex_exllamav2(
     regex_str: str,
     sampler: Sampler = multinomial(),
 ) -> SequenceGenerator:
-    fsm = RegexGuide(regex_str, model.tokenizer)
+    fsm = RegexGuide(regex_str, model.outlines_tokenizer)
 
     device = model.device
     generator = SequenceGenerator(fsm, model, sampler, device)
