@@ -73,7 +73,7 @@ def model_transformers_vision(tmp_path_factory):
 
 @pytest.fixture(scope="session")
 def model_vllm(tmp_path_factory):
-    return models.vllm("facebook/opt-125m", gpu_memory_utilization=0.1)
+    return models.vllm("gpt2", gpu_memory_utilization=0.1)
 
 
 # TODO: exllamav2 failing in main, address in https://github.com/outlines-dev/outlines/issues/808

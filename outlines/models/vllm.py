@@ -122,11 +122,16 @@ class VLLM:
             # TODO: remove this if statement once fixed
             # https://github.com/vllm-project/vllm/issues/5404#issuecomment-2175972897
             if top_k == 1:
-                sampling_params.repetition_penalty = 0
+                sampling_params.repetition_penalty = 1.0
         if temperature is not None and sampling_params.temperature == 1.0:
             sampling_params.temperature = temperature
         if sampler == "beam_search":
             sampling_params.use_beam_search = True
+            sampling_params.temperature = 0.0
+
+            # cannot use beam search with 1 beam, switch to greedy
+            if sampling_params.n == 1:
+                sampling_params.use_beam_search = False
 
         results = self.model.generate(
             prompts,

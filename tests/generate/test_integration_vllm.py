@@ -104,19 +104,14 @@ def test_vllm_multinomial_sampling(model):
 
 
 def test_vllm_beam_search(model):
-    sampler = samplers.beam_search(1)
+    sampler = samplers.beam_search(2)
     generator = generate.text(model, sampler)
     res1 = generator("test")
-    sampler = samplers.greedy()
+    sampler = samplers.beam_search(2)
     generator = generate.text(model, sampler)
     res2 = generator("test")
     assert res1 == res2
-
-    sampler = samplers.beam_search(2)
-    generator = generate.text(model, sampler)
-    res = generator("test")
-    assert len(res) == 2
-    assert res[0] != res[1]
+    assert res1[0] != res1[1]
 
 
 def test_vllm_text_stop(model):
