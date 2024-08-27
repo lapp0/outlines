@@ -222,9 +222,6 @@ def test_generate_fsm(request, model_fixture, pattern):
     assert re.fullmatch(pattern, res) is not None, res
 
 
-@pytest.mark.skip(
-    "Fix issues with JSON, some models fail this test https://github.com/outlines-dev/outlines/issues/985"
-)
 @pytest.mark.parametrize("model_fixture", ALL_MODEL_FIXTURES)
 def test_generate_json(request, model_fixture, sample_schema):
     model = request.getfixturevalue(model_fixture)
