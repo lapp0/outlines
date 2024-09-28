@@ -1,7 +1,7 @@
 from outlines.caching import cache_disabled
 from outlines.fsm.guide import RegexGuide
 
-from .common import ensure_numba_compiled, setup_tokenizer
+from .common import setup_tokenizer
 
 regex_samples = {
     "email": r"[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*@(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?",
@@ -13,6 +13,7 @@ regex_samples = {
     "url": r"(https?:\/\/)?([\da-z\.-]+)\.([a-z\.]{2,6})([\/\w \.-]*)*\/?",
     "ssn": r"\d{3}-\d{2}-\d{4}",
     "complex_span_constrained_relation_extraction": "(['\"\\ ,]?((?:of|resulting|case|which|cultures|a|core|extreme|selflessness|spiritual|various|However|both|vary|in|other|secular|the|religious|among|moral|and|It|object|worldviews|altruism|traditional|material|aspect|or|life|beings|virtue|is|however|opposite|concern|an|practice|it|for|s|quality|religions|In|Altruism|animals|happiness|many|become|principle|human|selfishness|may|synonym)['\"\\ ,]?)+['\"\\ ,]?\\s\\|\\s([^|\\(\\)\n]{1,})\\s\\|\\s['\"\\ ,]?((?:of|resulting|case|which|cultures|a|core|extreme|selflessness|spiritual|various|However|both|vary|in|other|secular|the|religious|among|moral|and|It|object|worldviews|altruism|traditional|material|aspect|or|life|beings|virtue|is|however|opposite|concern|an|practice|it|for|s|quality|religions|In|Altruism|animals|happiness|many|become|principle|human|selfishness|may|synonym)['\"\\ ,]?)+['\"\\ ,]?(\\s\\|\\s\\(([^|\\(\\)\n]{1,})\\s\\|\\s([^|\\(\\)\n]{1,})\\))*\\n)*",
+    "extremely_complex_issue_658": '\\{[\\n ]*"a"[\\n ]*:[\\n ]*"(?:[^"\\\\\\x00-\\x1f\\x7f-\\x9f]|\\\\.){,60}"[\\n ]*,[\\n ]*"b"[\\n ]*:[\\n ]*\\[[\\n ]*(("(?:[^"\\\\\\x00-\\x1f\\x7f-\\x9f]|\\\\.){,20}")(,[\\n ]*("(?:[^"\\\\\\x00-\\x1f\\x7f-\\x9f]|\\\\.){,20}")){0,4})?[\\n ]*\\][\\n ]*,[\\n ]*"c"[\\n ]*:[\\n ]*"(?:[^"\\\\\\x00-\\x1f\\x7f-\\x9f]|\\\\.){,200}"[\\n ]*,[\\n ]*"d"[\\n ]*:[\\n ]*\\[[\\n ]*(("(?:[^"\\\\\\x00-\\x1f\\x7f-\\x9f]|\\\\.){,100}")(,[\\n ]*("(?:[^"\\\\\\x00-\\x1f\\x7f-\\x9f]|\\\\.){,100}")){0,4})?[\\n ]*\\][\\n ]*,[\\n ]*"e"[\\n ]*:[\\n ]*\\[[\\n ]*(("(?:[^"\\\\\\x00-\\x1f\\x7f-\\x9f]|\\\\.){,20}")(,[\\n ]*("(?:[^"\\\\\\x00-\\x1f\\x7f-\\x9f]|\\\\.){,20}")){0,14})?[\\n ]*\\][\\n ]*,[\\n ]*"f"[\\n ]*:[\\n ]*\\[[\\n ]*(("(?:[^"\\\\\\x00-\\x1f\\x7f-\\x9f]|\\\\.){,30}")(,[\\n ]*("(?:[^"\\\\\\x00-\\x1f\\x7f-\\x9f]|\\\\.){,30}")){0,14})?[\\n ]*\\][\\n ]*\\}',
 }
 
 
@@ -21,7 +22,6 @@ class RegexGuideBenchmark:
 
     def setup(self, pattern_name):
         self.tokenizer = setup_tokenizer()
-        ensure_numba_compiled(self.tokenizer)
         self.pattern = regex_samples[pattern_name]
 
     @cache_disabled()
@@ -34,7 +34,6 @@ class MemoryRegexGuideBenchmark:
 
     def setup(self, pattern_name):
         self.tokenizer = setup_tokenizer()
-        ensure_numba_compiled(self.tokenizer)
         self.pattern = regex_samples[pattern_name]
 
     @cache_disabled()
